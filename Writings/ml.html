@@ -1,0 +1,592 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Style-Type" content="text/css" />
+  <meta name="generator" content="pandoc" />
+  <title></title>
+ <!--  <style type="text/css">code{white-space: pre;}</style> -->
+   <link rel="stylesheet" type="text/css" href="style.css">
+
+  <script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_CHTML-full" type="text/javascript"></script>
+</head>
+<body>
+<div id="TOC">
+<ul>
+<li><a href="#overview">Overview</a></li>
+<li><a href="#supervised-learning">Supervised Learning</a><ul>
+<li><a href="#variable-types-and-terminology">Variable Types and Terminology</a></li>
+</ul></li>
+<li><a href="#linear-regression">Linear Regression</a></li>
+<li><a href="#logistic-regression">Logistic Regression</a></li>
+<li><a href="#the-perceptron">The Perceptron</a></li>
+<li><a href="#boosting">Boosting</a><ul>
+<li><a href="#adaboost">AdaBoost</a></li>
+</ul></li>
+<li><a href="#nearest-neighbour-methods">Nearest Neighbour Methods</a></li>
+<li><a href="#support-vector-machines">Support Vector Machines </a><ul>
+<li><a href="#soft-margin-svm">Soft-Margin SVM</a></li>
+</ul></li>
+<li><a href="#principal-component-analysis">Principal Component Analysis</a></li>
+<li><a href="#decision-trees">Decision Trees</a><ul>
+<li><a href="#impurity-functions">Impurity Functions</a></li>
+<li><a href="#id3-algorithm">ID3-Algorithm</a></li>
+</ul></li>
+<li><a href="#bagging">Bagging</a></li>
+<li><a href="#random-forest">Random Forest</a></li>
+<li><a href="#kernels">Kernels</a><ul>
+<li><a href="#the-kernel-trick"> The Kernel Trick</a></li>
+<li><a href="#inner-product-computation">Inner Product Computation</a></li>
+<li><a href="#general-kernels">General Kernels</a></li>
+<li><a href="#kernel-functions">Kernel Functions</a></li>
+</ul></li>
+<li><a href="#clustering">Clustering</a><ul>
+<li><a href="#k-means-optimization-problem">K-means Optimization Problem</a></li>
+<li><a href="#clustering-with-mixtures-of-gaussian">Clustering with mixtures of Gaussian</a></li>
+</ul></li>
+<li><a href="#generative-approch-to-classification">Generative Approch to Classification</a></li>
+<li><a href="#neural-networks">Neural Networks</a><ul>
+<li><a href="#perceptron-recap">Perceptron Recap</a><ul>
+<li><a href="#multi-layer-perceptron-mlp">Multi-layer Perceptron (MLP) </a></li>
+</ul></li>
+<li><a href="#computation-in-a-neural-network">Computation in a neural network</a></li>
+<li><a href="#activation-functions">Activation Functions</a></li>
+<li><a href="#bias-and-variance">Bias And Variance</a><ul>
+<li><a href="#regularization">Regularization</a></li>
+<li><a href="#convolutional-neural-networks">Convolutional Neural Networks <span class="citation"></span></a></li>
+<li><a href="#why-cnn">Why CNN ?</a></li>
+<li><a href="#some-aspects-of-implementation">Some aspects of implementation</a></li>
+</ul></li>
+</ul></li>
+</ul>
+</div>
+<h1 id="overview">Overview</h1>
+<p>I made this document as a way to learn ML for my masters’ thesis . It’s not an original work, but a compilation of scribed notes of the ML course by Dr Sanjoy Dasgupta(UCSD), [SD] which I audited. Some parts are drawn directly/inspired from Andrew NG’s Stanford CS229 course notes, [ANG] and Kilian weinberger’s Cornell CS4780 course notes[KW]. My primary reference was ’The Elements of Statistical Learning’ by Trevor Hastie, Robert Tibshirani, Jerome Friedman[HTF]. So there will be considerable overlap with the aforementioned materials. This note might lack mathematical rigor but I have tried to give proofs and supplementary topics wherever necessary. For each algorithm, I have given a url to Github repo containing the implemetation using one of the three datasets viz Fisher’s Iris dataset, Wisconsin Breast Cancer Dataset and MNIST handwritten digits dataset. Please write to me if you find any inaccuracies.I hope this proves at least moderately interesting or useful for you.</p>
+<h1 id="supervised-learning">Supervised Learning</h1>
+<p>In a typical scenario, we have an outcome measurement, usually quantitative (such as a stock price) or categorical (such as heart attack/no heart attack), that we wish to predict based on a set of features (such as diet and clinical measurements). We have a training set of data, in which we observe the outcome and feature measurements for a set of objects (such as people). Using this data we build a prediction model, or learner, which will enable us to predict the outcome for new unseen objects. A good learner is one that accurately predicts such an outcome. The examples above describe what is called the supervised learning problem. It is called “supervised” because of the presence of the outcome variable to guide the learning process.[HTF]</p>
+<h2 id="variable-types-and-terminology">Variable Types and Terminology</h2>
+<p>The outcome measurement which we wish to predict denoted as <strong><em>outputs</em></strong> depend on a set of variables denoted as <strong><em>inputs</em></strong>. Classicaly,the <em>inputs</em> are independent varibales whereas <em>outputs</em> are dependent variables. The term <em>features</em> will be used interchangeably with inputs.</p>
+<p>The <em>outputs</em> which we wish to predict can be qualitative or quantitative(as in blood sugar level). When the <em>outputs</em> are qualitative (as in spams or not spams),it is referred as categorical or discrete variables and are typically represented numerically by codes,as in -spam or not spam can be coded as -1 or 1. Depending upon the kind of output varible, the prediction task can be of two types: <em>regression</em> when we predict quantitative outputs and <em>classification</em> when we predict qualitative outputs.</p>
+<p>The input variables/features are denoted by <span class="math inline">\(x^{(i)}\)</span> and the space of all such <span class="math inline">\(x^{(i)}\)</span> is <span class="math inline">\(X\)</span>. The output variable that we are trying to predict is denoted as <span class="math inline">\(y^{(i)}\)</span> and the space of all such <span class="math inline">\(y^{(i)}\)</span> is <span class="math inline">\(Y\)</span>. A pair <span class="math inline">\((x^{(i)},y^{(i)})\)</span> is called a training example and the dataset, we will be using to learn - a collection of <span class="math inline">\(n\)</span> training examples <span class="math inline">\( \{(x^{(i)},y^{(i)});i=1,2,...,n\} \)</span> - is called a training set. The superscript <span class="math inline">\(“(i)”\)</span> in the notation is simply an index into the training set.</p>
+<h1 id="linear-regression">Linear Regression</h1>
+<p>Given a vector of inputs, <span class="math inline">\(x^{T}=(x_{1},x_{2},..., x_{d})\)</span>.We need to know functions/hypotheses <span class="math inline">\(h\)</span> that can approximate <span class="math inline">\(y\)</span> as a linear function of <span class="math inline">\(x\)</span>: <span class="math display">\[h_{\theta}(x)=\theta_{0} + \sum_{i=1}^{d}x_{j}\theta_{j}\]</span> <span class="math inline">\(\theta_{i}\)</span>s are parameters/weight parametrizing the space of linear functions mapping from <span class="math inline">\(X\)</span> to <span class="math inline">\(Y\)</span>.The term <span class="math inline">\(\theta_{0}\)</span> is the intercept, also known as the <em>bias</em> in machine learning.It is covenient to include <span class="math inline">\(\theta_{0}\)</span> in the vector of weights <span class="math inline">\(\theta\)</span> and add constant variable <span class="math inline">\(1\)</span> to the vector <span class="math inline">\(x\)</span>, so that <span class="math display">\[h_{\theta}(x) = \theta^{T}x\]</span> <span class="math inline">\(w\)</span> ( weights) and <span class="math inline">\(b\)</span> (bias) can be interchangably used with <span class="math inline">\(\theta\)</span> and <span class="math inline">\(\theta_{0}\)</span> respectively.</p>
+<p>For a training set,we have to learn the parameters <span class="math inline">\(\theta,\)</span> so that we can predict <span class="math inline">\(y\)</span>. One reasonable method seems to be to make <span class="math inline">\(h(x)\)</span> close to y,for the training examples.To formalize this, we will define a function that measures, for each value of the <span class="math inline">\(\theta\)</span>’s, how close the <span class="math inline">\(h(x^{(i)})&#39;\)</span> s are to the corrsponding <span class="math inline">\(y^{(i)}\)</span>’s.</p>
+<p>We define Cost/Loss function: <span class="math display">\[J(\theta)=\frac{1}{2}\sum_{i=1}^{n}(h_{\theta}(x^{(i)})-y^{(i)})^{2},\]</span>this is the Least Squares cost function.In this approach, we pick the coefficients <span class="math inline">\(\theta\)</span> to minimize the cost function <span class="math inline">\(J\)</span>.The LS cost function is quadratic function in weights, <span class="math inline">\(\theta\)</span> and hence it’s minimum always exist, but may not be unique. Given a set of training examples <span class="math inline">\((x^{(i)},y^{(i)})\)</span> i.e training set ,define a matrix <span class="math inline">\(X\)</span> to be the <span class="math inline">\(m\)</span>-by-<span class="math inline">\(n\)</span> matrix that contains the input values of training examples in it’s rows:</p>
+<p><span class="math display">\[\begin{bmatrix} 
+  &amp; {(x^{(1)})^{T}} &amp;  \\
+  &amp; \vdots &amp; \\
+  &amp;   (x^{(m)})^{T}     &amp;  
+  \end{bmatrix}\]</span></p>
+<p>Let <span class="math inline">\( \textbf y\)</span> be the <span class="math inline">\(m\)</span>-dimensional vector containing the target/output values from the training set: <span class="math display">\[\begin{bmatrix} 
+ &amp; y^{(1)} &amp;  \\
+ &amp; \vdots &amp; \\
+ &amp;   y^{(m)}     &amp;  
+ \end{bmatrix}\]</span></p>
+<p>Since <span class="math inline">\(h_{\theta}(x^{(i)})=(x^{(i)})^{T}\theta\)</span>,we can verify that <span class="math display">\[X \theta - \textbf y = \begin{bmatrix} 
+ &amp; {(x^{(1)})^{T}}\theta &amp;  \\
+ &amp; \vdots &amp; \\
+ &amp;   (x^{(m)})^{T} \theta    &amp;  
+ \end{bmatrix} - \begin{bmatrix} 
+ &amp; y^{(1)} &amp;  \\
+ &amp; \vdots &amp; \\
+ &amp;   y^{(m)}     &amp;  
+ \end{bmatrix}\]</span></p>
+<p><span class="math display">\[=\begin{bmatrix} 
+ &amp; h_{\theta}(x^{(1)})-y^{(1)} &amp;  \\
+ &amp; \vdots &amp; \\
+ &amp;  h_{\theta}(x^{(m)})- y^{(m)}     &amp;  
+ \end{bmatrix}\]</span></p>
+<p><span class="math inline">\(\frac{1}{2}(X\theta-\textbf y)^{T}(X\theta-\textbf y)=\frac{1}{2} \sum_{i=1}^{m}(h_{\theta}(x^{(i)})-y^{(i)})^{2}=J(\theta)\)</span> This is the cost function.To minimize <span class="math inline">\(J\)</span>,we have to find the derivatives with respect to <span class="math inline">\(\theta\)</span></p>
+<p>Some matrix derivative results <span class="math display">\[\nabla_{A}tr AB = B^{T}\]</span> <span class="math display">\[\nabla_{A}\vert A\vert=\vert A\vert(A^{-1})^{T}\]</span> <span class="math display">\[\nabla_{A^{T}}f(A)= (\nabla_{A}f(A))^{T}\]</span> <span class="math display">\[\nabla_{A}trABA^{T}C=CAB+C^{T}AB^{T}\]</span></p>
+<p>Using the last two results <span class="math display">\[\nabla_{A^{T}}trABA^{T}C=B^{T}A^{T}C^{T}+BA^{T}C\]</span></p>
+<p>The cost function, <span class="math inline">\(J(\theta)=\frac{1}{2}(X\theta-\textbf{y})^{T}(X\theta-\textbf{y})\)</span></p>
+<p><span class="math display">\[\nabla_{\theta} J(\theta)  =\nabla_{\theta}\frac{1}{2}(X\theta-\textbf{y})^{T}(X\theta-\textbf{y})\]</span></p>
+<p><span class="math display">\[=\frac{1}{2}\nabla_{\theta}(\theta^{T}X^{T}X\theta-\theta^{T}X^{T}\textbf{y}-\textbf{y}^{T}X\theta+\textbf{y}^{T}\textbf{y})\]</span></p>
+<p><span class="math display">\[=\frac{1}{2}\nabla_{\theta} tr(\theta^{T}X^{T}X\theta-\theta^{T}X^{T}\textbf{y}-\textbf{y}^{T}X\theta+\textbf{y}^{T}\textbf{y})\]</span></p>
+<p><span class="math display">\[=\frac{1}{2}\nabla_{\theta}(tr \theta^{T}X^{T}X\theta-2tr\textbf{y}^{T}X\theta)\]</span></p>
+<p><span class="math display">\[=\frac{1}{2}(X^{T}X\theta+X^{T}X\theta-2X^{T}\textbf{y})  =X^{T}X\theta-X^{T}\textbf{y}\]</span></p>
+<p>To minimize <span class="math inline">\(J,\)</span> we set the derivative to zero and obtain:<span class="math inline">\(X^{T}(X\theta-\textbf{y})=0\)</span>. If <span class="math inline">\(X^{T}X\)</span> is nonsingular then the value of <span class="math inline">\(\theta \)</span> that minimizes <span class="math inline">\(J(\theta)\)</span> is given in closed form by the equation, <span class="math display">\[\theta=(X^{T}X)^{-1}X^{T}\textbf{y}\]</span> Now that we have the parameters,we can predict the output corresponding to the input <span class="math inline">\(x^{(i)}\)</span> as <span class="math inline">\(y^{(i)}=\theta^{T}x^{(i)}\)</span></p>
+<h1 id="logistic-regression">Logistic Regression</h1>
+<p>Logistic regression is a proabilistic method,where a linear function of <span class="math inline">\(x\)</span>, <span class="math inline">\(wx + b \)</span> is mapped to <span class="math inline">\([0,1]\)</span> using our new hypothesis <span class="math inline">\(h_{w}(x)\)</span> defined as</p>
+<p><span class="math display">\[h_{w}(x) = g(w^{T}x) = \frac{1}{1 + \exp{(-w^{T}x)}} \ ,\]</span></p>
+<p>Where <span class="math display">\[g(z)= \frac{1}{1+ \exp{(-z)}}\]</span></p>
+<p>is called the logistic function or the sigmoid function. The learning problem is, given a data set and logistic regression model how will we find the parameter <span class="math inline">\(w\)</span>.We can achieve this using probabilistic assumptions, and then fit the parameters via maximum likelihood.</p>
+<p>Let us assume that <span class="math display">\[P(y =1 \vert x;w) = h_{w}(x)\]</span> <span class="math display">\[P(y =0 \vert  x;w) = 1 - h_{w}(x)\]</span></p>
+<p>This together can be expressed as <span class="math display">\[p(y \vert x;w) = (h_{w}(x))^{y}(1-h_{w}(x))^{1-y}\]</span></p>
+<p>Assuming that we have m training examples were generated independently, we can then write down the likelihood of the parameters as</p>
+<p><span class="math display">\[\begin{split}
+L(w) &amp; = P(\textbf{y} \vert \textbf{X} ; w) \\
+&amp; = \prod_{i=1}^{m} p(y^{(i)} \vert x ^{(i)};w) \\
+&amp; = \prod_{i=1}^{m}  (h_{w}(x^{(i)}))^{y^{(i)}}(1-h_{w}(x^{(i)}))^{1-y^{(i)}} 
+ \end{split}\]</span></p>
+<p>Maximizing the likelhood is equivalent to maximizing any strictly incresing function of likelihood.</p>
+<p><span class="math display">\[\begin{split}
+l(w) &amp; = log L(w) \\ 
+&amp; = \sum_{i =1}^{m} y^{(i)} log h(x^{(i)}) + (1-y^{(i)}) log(1-h(x^{(i)}))
+\end{split}\]</span></p>
+<p>We can use gradient descent to maximize the above equation and the update rule will be <span class="math inline">\(w := w +\alpha \nabla _{w}l(w)\)</span>.For a single training example,</p>
+<p><span class="math display">\[\frac{\partial l(w)}{\partial w_{j}} = (y - h_w(x))x_{j}\]</span></p>
+<p>So the update rule for stochastic gradient ascent becomes <span class="math display">\[w_{j} := w_{j} +\alpha (y^{(i)} - h_w(x^{(i)}))x^{(i)}_{j}\]</span></p>
+<p>Find an implementation <a href="https://github.com/aswin16/ML-REPORT/blob/master/codes/log_regression.ipynb">here</a></p>
+<h1 id="the-perceptron">The Perceptron</h1>
+<p>In a binary classification problem , where dataset(D) is <span class="math inline">\((x,y) \in \mathbb{R}^{d} \times\{-1,1\}\)</span>, the learning problem is to find a hyperplane which separates the data into two classes, assuming the data is linearly classifiable. The hyperplane is parametrized by <span class="math inline">\(w\in\mathbb{R}^{d}\)</span> and <span class="math inline">\( b \in \mathbb{R}\)</span> such that <span class="math inline">\(w.x + b = 0 \)</span>, so the poblem is equivalent to learning the parameters <span class="math inline">\(w\)</span> and <span class="math inline">\(b\)</span>.On point <span class="math inline">\(x\)</span>, we predict the label as <span class="math inline">\(\textbf{sign(w.x + b)}\)</span>.<br />
+<span class="math display">\[(w.x + b) &gt; 0  \implies y = +1 \therefore y(w.x + b) &gt; 0\]</span></p>
+<p><span class="math display">\[(w.x + b) &lt; 0  \implies y = -1 \therefore y(w.x + b) &gt; 0\]</span></p>
+<p>i.e., If the true label of x is y, then <span class="math inline">\(y(w.x + b) &gt; 0 \)</span>, whereas for a misclassified pointi<span class="math inline">\(y(w.x + b) \leq 0 \)</span>. The Loss function for the perceptron can be defined as</p>
+<p><span class="math display">\[Loss=
+\begin{cases}
+0, &amp; \text{if} \ y(w.x + b) &gt; 0 
+ \\
+-y(w.x + b) , &amp; \text{if} \ y(w.x + b) \leq 0 
+\end{cases}\]</span></p>
+<p>This loss function is a convex function of <span class="math inline">\(y(w.x + b)\)</span>, and we can use stochastic gradient descent to find the value of parameters that minimizes the loss function. The update on the parameter w can be written as <span class="math inline">\(w := w - \eta \nabla L(w)\)</span>,where <span class="math inline">\(w = [w,b]\)</span>.The derivative of Loss function with respect to the parameters(assuming bias term is not absorbed into the weight vector) are</p>
+<p><span class="math display">\[\frac{\partial L}{\partial w} = -yx , \frac{\partial L}{\partial b} = -y\]</span>. So the update rule will be <span class="math inline">\(w := w + \eta yx \)</span> and <span class="math inline">\(b := b + \eta y\)</span>. For <span class="math inline">\(w = [w,b]\)</span>, this is equivalent to <span class="math inline">\(w := w + \eta yx \)</span>. If <span class="math inline">\(\eta = 1\)</span>, then the update rule will be <span class="math inline">\(w := w +  yx \)</span>.</p>
+<p>Initialize <span class="math inline">\(\vec{w} = 0\)</span></p>
+<p><span class="math inline">\(m=0\)</span></p>
+<p><span class="math inline">\(\vec{w} \leftarrow \vec{w} + yx\)</span> <span class="math inline">\(m \leftarrow m + 1\)</span></p>
+<p>break</p>
+<p>If the training data is linearly classifiable, Perceptron is guaranteed to converge after finite number of steps and return a seperating hyperplane with zero training error.</p>
+<p><strong>Margin <span class="math inline">\(\gamma\)</span> of a hyperplane</strong> <span class="math inline">\(w\)</span> is defined as <span class="math inline">\(\gamma = min_{(x_{i},y_{i})\in D}  \frac{ \vert x_{i}^{T}w \vert}{\|w\|_{2}}\)</span>, i.e it is the distance to the closest data point from the hyperplane paramtrized by <span class="math inline">\(w\)</span>.</p>
+<p>If a data set is linearly separable, the Perceptron will find a separating hyperplane in a finite number of updates.</p>
+<p>Suppose <span class="math inline">\(\exists w^{*}\)</span> such that <span class="math inline">\( y_{i}(x^{T}w^{*}) &gt; 0\)</span> <span class="math inline">\( \forall (x_{i},y_{i}) \in D\)</span>.Suppose that we rescale each data point and the <span class="math inline">\(w^{*}\)</span> such that</p>
+<p><span class="math display">\[\|w^{*}\| = 1 \ and \ \|x_{i}\| \leq 1 \forall x_{i} \in D\]</span></p>
+<p>So the margin <span class="math inline">\(\gamma\)</span> for the hyperplane <span class="math inline">\(w^{*}\)</span> becomes <span class="math inline">\( \gamma = min_{(x_{i},y_{i})\in D} \vert x_{i}^{T}w^{*} \vert \)</span>. After rescaling, all inputs <span class="math inline">\(x_{i}\)</span> lies in a unit sphere in d-dimensional space.The separating hyperplane is defined by <span class="math inline">\(w^{*}\)</span> with <span class="math inline">\(\|w\|^{*} = 1\)</span> i.e is <strong><span class="math inline">\(w^{*}\)</span></strong> lies exactly on the unit sphere.</p>
+<p>We claim that if the above assumptions hold,then the Perceptron algorithm makes atmost <span class="math inline">\(\frac{1}{\gamma ^{2}}\)</span> mistakes.The update on w is only done in the instance of misclassification, i.e when <span class="math inline">\(y(x^{T}w) \leq 0\)</span> holds.As <span class="math inline">\(w^{*}\)</span> is a seperating hyper-plane and classifies all points correctly, <span class="math inline">\(y(x^{T}w)&gt;0\)</span> <span class="math inline">\( \forall x\)</span>.</p>
+<p>Consider the effect of an update <span class="math inline">\(w \leftarrow w + xy \)</span> on the two terms <span class="math inline">\(w^{T}w^{*}\)</span> and <span class="math inline">\(w^{T}w\)</span>.</p>
+<p><span class="math inline">\(w^{T}w^{*} = (w+xy)^{T}w^{*} = w^{T}w^{*} + y(x^{T}w^{*}) \geq w^{T}w^{*} + \gamma \)</span></p>
+<p>The inequality follows from the fact that, for <span class="math inline">\(w^{*}\)</span>, the distance from the hyperplane defined by <span class="math inline">\(w^{*}\)</span> to <span class="math inline">\(x\)</span> must be at least <span class="math inline">\(\gamma\)</span> i.e <span class="math inline">\(y(x^{T}w^{*}) = \vert x^{T}w^{*}\vert \geq \gamma\)</span>.This implies that with each update <span class="math inline">\(w^{T}w^{*}\)</span> grows atleast by <span class="math inline">\(\gamma\)</span></p>
+<p><span class="math inline">\(w^{T}w = (w+xy)^{T}(w+xy) = w^{T}w + \underbrace{2y(w^{T}x)}_\text{$ \leq 0$} + \underbrace{y^{2}(x^{T}x)}_\text{$0 \leq \ \leq 1$}  \leq
+     w^{T}w + 1\)</span>. This inequality follows the fact that, <span class="math inline">\(2y(w^{T}x) \leq 0\)</span>, as we had to make an update, meaning <span class="math inline">\(x\)</span> was misclassified. <span class="math inline">\(0 \leq y^{2}(x^{T}x) \leq 1\)</span> as <span class="math inline">\(y^{2}=1 \)</span> always and all <span class="math inline">\(x^{T}x \leq 1\)</span> as <span class="math inline">\(\|x\| \leq 1\)</span>,(rescaled). This implies that <span class="math inline">\(w^{T}w\)</span> grows at most by 1.</p>
+<p>After <span class="math inline">\(M\)</span> updates, the two inequalities becomes <span class="math display">\[w^{T}w^{*} \geq M\gamma\]</span> <span class="math display">\[w^{T}w \leq M\]</span></p>
+<p><span class="math display">\[M\gamma \leq w^{T}w^{*} \leq \vert w^{T}w^{*} \vert \leq \| w^{T} \| \underbrace{\|w^{*}\|}_\text{1}=\sqrt{w^{T}w}\]</span></p>
+<p><span class="math inline">\(w^{T}w\)</span> can most be <span class="math inline">\(M\)</span>, as <span class="math inline">\(w\)</span> is initialized with 0 and with each update <span class="math inline">\(w^{T}w\)</span> grows at most by 1.</p>
+<p><span class="math display">\[\implies M\gamma \leq \sqrt{M}\]</span> <span class="math display">\[\implies M^{2}\gamma^{2} \leq M\]</span> <span class="math display">\[\implies M \leq \frac{1}{\gamma ^{2}}\]</span> Hence the number of updates <span class="math inline">\(M\)</span> is bounded from above by a constant.</p>
+<h1 id="boosting">Boosting</h1>
+<p><strong>A</strong> <span>Weak Classifier</span> is the one with accuracy marginally better than random guessing. For a binary weak classifier this means, <span class="math inline">\(P(h(x) \neq y) = \frac{1}{2} - \epsilon .\)</span> An learning algorithm which consistently generate such weak classifier is called a <strong>weak learner</strong>.<br />
+<strong>Boosting</strong> is a machine learning approach where such weak learners are combined to get better prediction acuracy.<br />
+</p>
+<h2 id="adaboost">AdaBoost</h2>
+<p>1.  Given <span class="math inline">\((x^{(i)},y^{(i)}),...,(x^{(N)},y^{(N)}),\)</span> where <span class="math inline">\(y^{(i)}\in \{-1,+1\}\)</span> 2.   Initialize the observation weights <span class="math inline">\(w_{i}= \frac{1}{N},i = 1,2,...,N.\)</span></p>
+<p>3.  For m =1 to M:</p>
+<p>(a)  Fit a classifier <span class="math inline">\(h_{m}(x)\)</span> to the trainng data using weights <span class="math inline">\(w_{i}.\)</span></p>
+<p>(b) Compute</p>
+<p><span class="math display">\[err_{m} = \frac{\sum_{i=1}^{N}w_{i}y^{(i)}h_{m}(x^{(i)})}{\sum_{i=1}^{N} w_{i}}\]</span></p>
+<p>(c) compute <span class="math inline">\(\alpha_{m} = \log((1-err_{m})/err_{m})\)</span></p>
+<p>(d) set <span class="math inline">\(w_{i} \leftarrow w_{i}.exp[-\alpha_{m}.y^{(i)}h_{m}(x^{(i)})], \ i = 1,2,...,N\)</span></p>
+<p>4.  Output <span class="math inline">\(H(x) = sign[\sum_{m=1}^{M}\alpha_{m}G_{m}(x)]\)</span></p>
+<h1 id="nearest-neighbour-methods">Nearest Neighbour Methods</h1>
+<p>Nearest-neighbour methods use those observations in the taining set <span class="math inline">\(\mathcal{T}\)</span> closest in input space to <span class="math inline">\(x\)</span> to form <span class="math inline">\(\hat{Y}\)</span>. The k-nearest neighbour fit for <span class="math inline">\(\hat{Y}\)</span> is defined as follows:</p>
+<p><span class="math display">\[\hat{Y(x)} = \frac{1}{k}\sum_{x_{i} \in N_{k}(x)} y_{i},\]</span> where <span class="math inline">\(N_{k}\)</span> is neighbourhood of <span class="math inline">\(x\)</span> defined by <span class="math inline">\(k\)</span> closest points <span class="math inline">\(x_{i}\)</span> in the training sample.</p>
+<p>Closeness is quantified by a metric, which for instance can be assumed as Euclidean distance.We find <span class="math inline">\(k\)</span> observations with <span class="math inline">\(x_{i}\)</span> closes to x in the input space of training set, and average their responses.</p>
+<p>The notion of distance between two vectors is defined by a norm. A norm is a function from a vector space over the real or complex numbers to the nonnegative real numbers that satisfies certain properties pertaining to scalability and additivity, and takes the value zero if only the input vector is zero.</p>
+<p>As mentioned above we will use the Euclidean norm for all practical purposes.The Euclidean norm is a specific norm on a vector space, that is strongly related with the Euclidean distance, and equals the square root of the inner product of a vector with itself.On an n-dimensional Euclidean space <span class="math inline">\( R^{n}\)</span>, the intuitive notion of length of the vector <span class="math inline">\(x = (x1, x2, ..., xn)\)</span> is captured by the formula</p>
+<p><span class="math display">\[\|x\|_{2}= \sqrt{x_{1}^{2}+ \dots x_{n}^{2}}\]</span></p>
+<p>This definition of norm gives distance between two vectors as the euclidean norm of the component wise difference i.e if <span class="math inline">\(x, y \in R^{n}\)</span> then<br />
+<span class="math inline">\( \|(x-y)\|_{2} = \sqrt{\sum\limits_{i=1}^{n}(x_{i}-y_{i})^{2}} \)</span></p>
+<p>Find an implementation of NN method <a href="https://github.com/aswin16/ML-REPORT/blob/master/codes/NN_MNIST.ipynb">here</a></p>
+<h1 id="support-vector-machines">Support Vector Machines </h1>
+<p>The Perceptron algorithm assures to return a linear seperating hyperplane if one exists.Existence of one such hyperplane implies that there is infinite such hyperplanes, and the perceptron doesn’t guarantee to return the optimal seperating hyperplane i.e, the one with maximum margin. Support vector machines(SVM) finds maximum margin hyperplane.</p>
+<p>The training dataset is <span class="math inline">\((x^{(i)}, y^{(i)}) \in \mathbb{R}^{d} \{-1,+1\},i = 1,...,N\)</span> We define a hyperplane by <span class="math inline">\(\mathcal{H}=\{x \vert w^{T}x + b =0\}\)</span> paramtrized by w and b.Let the margin <span class="math inline">\(\gamma\)</span> be defined as the distance from the hyperplane to the closest point across both the classes. A classifiction rule induced by the hyperplane is <span class="math inline">\(h(x) = sign(w^{T}x+ b)\)</span></p>
+<p>Consider some point <span class="math inline">\(x\)</span>. Let <span class="math inline">\(d\)</span> be the vector from <span class="math inline">\(\mathcal{H}\)</span> to <span class="math inline">\(x\)</span> of minimum length. Let <span class="math inline">\(x^{P}\)</span> be the projection of <span class="math inline">\(x\)</span> onto <span class="math inline">\(\mathcal{H}\)</span>. It follows then that:</p>
+<p><span class="math inline">\(x^{P} = x - d.\)</span> <span class="math inline">\(w\)</span> is perpendicular to <span class="math inline">\(\mathcal{H}\)</span>. <span class="math inline">\(d\)</span> is parallel to <span class="math inline">\(w\)</span>, so <span class="math inline">\(d = \alpha w\)</span> for some <span class="math inline">\(\alpha \in \mathbb{R}\)</span>. <span class="math inline">\(x^{P} \in \mathcal{H}\)</span> which implies <span class="math inline">\(w^{T}x^{P} + b =0\)</span> therefore<br />
+<span class="math inline">\(w^{T}x^{p} + b = w^{T}(x-d) + b = w^{T}(x-d) + b = w^{T}(x-\alpha w) + b =0\)</span>, which implies <span class="math inline">\(\alpha = \frac{w^{T}x + b}{w^{T}w}\)</span></p>
+<p>The length of <span class="math inline">\(d\)</span> is the euclidean norm<br />
+<span class="math inline">\(\vert \vert d \vert \vert_{2} = \sqrt{d^{T}d} = \sqrt{\alpha ^{2}w^{T}w} = \frac{\vert w^{T}x +b \vert}{\sqrt{w^{T}w}} = \frac{\vert w^{T}x + b \vert}{\vert \vert w \vert \vert_{2}}\)</span></p>
+<p>Margin <span class="math inline">\(\mathcal{H}\)</span> with respect to <span class="math inline">\(D:\gamma(w,b) = \min{x \in D} \frac{\vert w^{T}x + b \vert }  {\vert \vert w \vert \vert_{2}}\)</span></p>
+<p>By definition, the margin and hyperplane are scale invariant : <span class="math inline">\(\gamma(\beta w,\beta b) = \gamma (w,b) \forall \beta \neq 0\)</span></p>
+<p>Note that if the hyperplane is such that <span class="math inline">\(\gamma\)</span> is maximized, it must lie right in the middle of the two classes. In other words, <span class="math inline">\(\gamma\)</span> must be the distance to the closest point within both classes. (If not, you could move the hyperplane towards data points of the class that is further away and increase <span class="math inline">\(\gamma\)</span>, which contradicts that <span class="math inline">\(\gamma\)</span> is maximized.)</p>
+<p>Our aim is to find a hyperplane with maximum margin and that all the points should be correctly classified. This is a constrained optimization problem where the objective is the maximization of margin subject to the constraint that all the points must be rightly classified.</p>
+<p><span class="math inline">\(\underbrace{\max_{w,b}  \ \gamma(w,b)}_\text{maximize margin}\)</span> such that <span class="math inline">\(\underbrace{ \forall i, \ y_{i}(w^{T}x_{i} + b) \geq 0}_\text{seperating hyperplane, such that all points are correctly classified}\)</span></p>
+<p>By plugging in the definition of <span class="math inline">\(\gamma\)</span>:</p>
+<p><span class="math inline">\( \underbrace{max_{w,b} \  \frac{1} {\vert \vert w \vert \vert_{2} } \ \ min _{x_{i} \in D} \  \vert w^{T}x_{i} + b \vert }_\text{maximize margin}\)</span> <span class="math inline">\(s.t.\)</span> <span class="math inline">\(\underbrace{\forall i, \  y_{i}(w^{T}x_{i} + b) \geq 0}_\text{separating hyperplane}\)</span></p>
+<p>Because the hyperplane is scale invariant, we can fix the scale of <span class="math inline">\(w,b\)</span> anyway we want. Let’s choose it such that</p>
+<p><span class="math display">\[min_{x\in D}  \ \vert w^{T}x+b \vert = 1\]</span></p>
+<p>Now our objective becomes <span class="math inline">\(max_{w,b} \  \frac{1} {\vert \vert w \vert \vert_{2}} . 1 = min_{w,b} \ \vert \vert w \vert \vert_{2} = min_{w,b} \  w^{T}w\)</span></p>
+<p>Thus the optimization problem becomes, <span class="math display">\[min_{w,b} \  w^{T}w\]</span> <span class="math display">\[\forall i, \ y_{i}(w^{T}x_{i} + b) \geq 0\]</span> <span class="math display">\[min_{i} \  \vert w^{T}x_{i} +b \vert = 1\]</span></p>
+<p>The two stated constraints for this optimization problem is equivalent.</p>
+<p><span class="math inline">\( min_{i} \  \vert w^{T}x_{i} +b \vert = 1\)</span> is same as <span class="math inline">\( min_{i} \  y_{i}(w^{T}x_{i} + b) = 1\)</span></p>
+<p>Now <span class="math inline">\(\forall i, \ y_{i}(w^{T}x_{i} + b) \geq 0\)</span> and <span class="math inline">\(min_{i} \ \ y_{i}(w^{T}x_{i} + b) = 1\)</span>, together this implies <span class="math inline">\( y_{i}(w^{T}x_{i} + b) \geq 1\)</span></p>
+<p><span class="math display">\[min_{w,b} \  w^{T}w\]</span> <span class="math display">\[\forall i, \ y_{i}(w^{T}x_{i} + b) \geq 1\]</span></p>
+<p>Now, this is a convex optimization problem with quadratic objective and linear inequality constraints.</p>
+<p>For the optimal <span class="math inline">\(w,b\)</span> pair some training points will have tight constraints i.e <span class="math inline">\(y_{i}(w^{T}x_{i} + b) = 1\)</span>.These training points are called <strong>support vectors.</strong> Support vectors are the training points that define the maximum margin of the hyperplane to the data set and they therefore determine the shape of the hyperplane.</p>
+<h2 id="soft-margin-svm">Soft-Margin SVM</h2>
+<p>If the classes overlap in the feature space i.e the linear inequality constraints are violated, there exist no solution to the optimization problem, this is usually the case with low dimensional data, but nevertheless we would like to have a hyperplane which can get most of the points correctly claassified with few violaion of constraints.</p>
+<p>This is achieved by allowing the constraints to be violated ever so slight with the introduction of slack variables <span class="math inline">\(\xi = (\xi_{1},\xi_{2}, ..., \xi_{N})\)</span></p>
+<p><span class="math display">\[min_{w,b} \  w^{T}w + C \sum_{i =1}^{n} \xi_{i}\]</span> <span class="math display">\[s.t. \ \forall i, \ y_{i}(w^{T}x_{i} + b) \geq 1- \xi_{i}\]</span> <span class="math display">\[\forall i \ \xi_{i} \geq 0\]</span></p>
+<p>The constant C decides how much slack we can use.The optimization problem is a tradeoff between slack <span class="math inline">\( \xi\)</span> and margin <span class="math inline">\(\gamma\)</span>.We need to minimize <span class="math inline">\(\vert \vert w \vert \vert\)</span>(for maximum margin) and <span class="math inline">\(\sum \xi_{i}\)</span>(total slack) as we dont want too many constraints to be violated.</p>
+<p>The slack variable <span class="math inline">\(\xi_{i}\)</span> allows the input <span class="math inline">\(x_{i}\)</span> to be closer to the hyperplane (or even be on the wrong side), but there is a penalty in the objective function for such “slack”. If C is very large, the SVM becomes very strict and tries to get all points to be on the right side of the hyperplane. If C is very small, the SVM becomes very loose and may “sacrifice” some points to obtain a simpler (i.e. lower<span class="math inline">\( \vert \vert w \vert \vert_{2} ^{2}\)</span>) solution.</p>
+<p>The value <span class="math inline">\(\xi_{i}\)</span> is proportional amount by which the prediction is on wrong side of the margin.Hence for points well inside the boundary the slack is zero and do not influence shape of the hyperplane.</p>
+<p>If <span class="math inline">\(C =0 \)</span> ,total slack is zero and that means slack is free and it’s possible to violate as many as constraints, this implies <span class="math inline">\(w = 0\)</span>.If <span class="math inline">\(C = \infty\)</span>,slack is infinitely costly.So we donts use slack, we fall back to hard margin-SVM.</p>
+<h1 id="principal-component-analysis">Principal Component Analysis</h1>
+<p>PCA is a dimensionality reduction algorithm, which aims to find those directions in which most of the variance of data lies i.e is it identifies the subspace in which the data approximately lies.Inorder to run, PCA the data needs to be preprocessed to normalize it’s mean and variance.The preprocessing procedure is as follows:</p>
+<ol>
+<li><p>Let <span class="math inline">\(\mu  = \frac{1}{m} \sum_{i=1}^{m}x^{i}\)</span></p></li>
+<li><p>Replace each <span class="math inline">\(x^{(i)}\)</span> with <span class="math inline">\(x^{(i)}-\mu\)</span> (zero out mean of the data)</p></li>
+<li><p>Let <span class="math inline">\(\sigma _{j}^{2} = \frac{1}{m} \sum_{i}(x_{j}^{(i)})^{2}\)</span></p></li>
+<li><p>Replace each <span class="math inline">\(x_{j}^{(i)}\)</span> with <span class="math inline">\(x_{j}^{(i)} /  \sigma_{j}\)</span>  (rescale each coordinate to have unit varaince,which ensures that different attributes are all treated on the same “scale.”)</p></li>
+</ol>
+<p>The dimensionality reduction is achieved by projecting the data into directions which capturre most of the variance of the data.</p>
+<p>Let <span class="math inline">\(x^{(i)} \in \mathbb{R}^{n}\)</span> be a point in our dataset and <span class="math inline">\(u\)</span> be a unit vector. <span class="math inline">\(x^{(i)}\)</span>’s projection onto <span class="math inline">\(u\)</span> is <span class="math inline">\(x^{(i)^T}u\)</span>.Hence, to maximize the variance of the projections, we would like to choose a unit-length <span class="math inline">\(u\)</span> so as to maximize:</p>
+<p><span class="math display">\[\frac{1}{m} \sum_{i=1}^{m}(x^{(i)^T}u)^{2} = \frac{1}{m} \sum_{i=1}^{m} u^{T}x^{(i)}x^{(i)^T}u = u^{T} \left(\frac{1}{m} \sum_{i=1}^{m} x^{(i)}x^{(i)^T} \right)u\]</span></p>
+<p>Maximizing this subject to <span class="math inline">\(\|u\|_{2}=1\)</span> gives the principal eigenvector of <span class="math inline">\(\Sigma = \frac{1}{m} \sum_{i=1}^{m} x^{(i)}x^{(i)^T} ,\)</span> which is the emperical covariance matrix of the data,assuming it has zero mean. <a href="https://math.stackexchange.com/questions/1199852/maximize-the-value-of-vtav"><span class="math inline">\(v^{T}Tv\)</span> is maximized if <span class="math inline">\(v\)</span> is eigenvector of <span class="math inline">\(T\)</span></a></p>
+<p>The direction of maximum variance turns out to be eigenvectors of the covariance matrix.If we wish to project our data into a k-dimensional subspace <span class="math inline">\((k &lt; n)\)</span>, we should choose <span class="math inline">\(u_{1}, ..., u_{k}\)</span> to be the top <span class="math inline">\(k\)</span> eigenvectors of <span class="math inline">\(\Sigma\)</span>. The <span class="math inline">\(u_{i}\)</span>s now form a new, orthogonal basis for the data.</p>
+<p>A datapoint <span class="math inline">\(x^{(i)}\)</span> projected into a low(say <span class="math inline">\(k&lt;n\)</span>)-dimensional subspace spanned by top <span class="math inline">\(k\)</span> eigenvectors of the covariance matrix is given by: <span class="math display">\[y^{(i)} =\begin{bmatrix} 
+    &amp; u_{1}^{T}x^{(i)} &amp;  \\
+    &amp; u_{2}^{T}x^{(i)} &amp;\\
+    &amp; \vdots &amp; \\
+    &amp; u_{k}^{T}x^{(i)} &amp;
+ \end{bmatrix}  \in \mathbb{R}^{k}\]</span> The vectors <span class="math inline">\(u_{1}, ..., u_{k}\)</span> are called the first principal components of the data.</p>
+<p><span class="math display">\[Y =\begin{bmatrix} 
+ \  &amp; y^{(1)} &amp; \ \\
+ \  &amp; y^{(2)} &amp; \ \\
+ \  &amp; \vdots &amp;  \ \\
+ \  &amp; y^{(m)} &amp;\
+ \end{bmatrix}  \in \mathbb{R}^{m \times k}\]</span></p>
+<p><span class="math display">\[X =\begin{bmatrix} 
+ &amp; x^{(1)} &amp;  \\
+ &amp; x^{(2)} &amp;\\
+ &amp; \vdots &amp; \\
+ &amp; x^{(m)} &amp;
+ \end{bmatrix}  \in \mathbb{R}^{m \times n}\]</span></p>
+<p><span class="math display">\[U =\begin{bmatrix} 
+\vert &amp; \vert&amp;  &amp;\vert \\
+u_{1} &amp; u_{2} &amp; \hdots &amp; u_{k}\\
+ 
+ \vert &amp; \vert&amp;  &amp;\vert
+ \end{bmatrix}  \in \mathbb{R}^{n \times k}\]</span> U is an orthogonal matrix, each column vector is an eigenvector of a covariance matrix.</p>
+<p><span class="math display">\[\underbrace{Y}_\text{low-dimesional  data}= \underbrace{X} _\text{original data}  \times \underbrace{U}_\text{k-principal components}\]</span></p>
+<p><span class="math display">\[\begin{bmatrix} 
+\   &amp; y^{(1)} &amp; \ \\
+\   &amp; y^{(2)} &amp; \ \\
+\   &amp; \vdots &amp;  \ \\
+\   &amp; y^{(m)} &amp;\
+\end{bmatrix}   =
+ \begin{bmatrix} 
+    &amp; x^{(1)} &amp;  \\
+    &amp; x^{(2)} &amp;\\
+    &amp; \vdots &amp; \\
+    &amp; x^{(m)} &amp;
+\end{bmatrix}  \times 
+ \begin{bmatrix} 
+    \vert &amp; \vert&amp;  &amp;\vert \\
+    u_{1} &amp; u_{2} &amp; \hdots &amp; u_{k}\\
+    
+    \vert &amp; \vert&amp;  &amp;\vert
+\end{bmatrix}\]</span></p>
+<p>We can reconstrut the data by projecting back into the original canonical basis. <span class="math inline">\(Y = XU\)</span>, <span class="math inline">\(YU^{T} = XUU^{T} \implies YU^{T} = X\)</span>. PCA can also be thought as an algorithm to choose the basis that minimizes the approximation(reconstruction also) error arising from projecting the data onto the k-dimensional subspace spanned by them.</p>
+<p>Find an implementation of PCA with MNIST data <a href="https://github.com/aswin16/ML-REPORT/blob/master/codes/PCA.ipynb">here</a>.</p>
+<h1 id="decision-trees">Decision Trees</h1>
+<p>Most data that is interesting has some inherent structure. In the k-NN case we make the assumption that similar inputs have similar neighbors.. This would imply that data points of various classes are not randomly sprinkled across the space, but instead appear in clusters of more or less homogeneous class assignments. Although there are efficient data structures enable faster nearest neighbor search, it is important to remember that the ultimate goal of the classifier is simply to give an accurate prediction. Imagine a binary classification problem with positive and negative class labels. If you knew that a test point falls into a cluster of 1 million points with all positive label, you would know that its neighbors will be positive even before you compute the distances to each one of these million distances. It is therefore sufficient to simply know that the test point is an area where all neighbors are positive, its exact identity is irrelevant.</p>
+<p>Decision trees are exploiting exactly that. Here, we do not store the training data, instead we use the training data to build a tree structure that recursively divides the space into regions with similar labels. The root node of the tree represents the entire data set. This set is then split roughly in half along one dimension by a simple threshold t All points that have a feature value fall into the right child node, all the others into the left child node. The threshold t</p>
+<p>and the dimension are chosen so that the resulting child nodes are purer in terms of class membership. Ideally all positive points fall into one child node and all negative points in the other. If this is the case, the tree is done. If not, the leaf nodes are again split until eventually all leaves are pure (i.e. all its data points contain the same label) or cannot be split any further (in the rare case with two identical points of different labels).</p>
+<p>Decision trees have several nice advantages over nearest neighbor algorithms:</p>
+<ol>
+<li><p>once the tree is constructed, the training data does not need to be stored. Instead, we can simply store how many points of each label ended up in each leaf - typically these are pure so we just have to store the label of all points;</p></li>
+<li><p>decision trees are very fast during test time, as test inputs simply need to traverse down the tree to a leaf - the prediction is the majority label of the leaf;</p></li>
+<li><p>decision trees require no metric because the splits are based on feature thresholds and not distances.</p></li>
+</ol>
+<p>What we try to achieve is a maximally compact tree which has only pure leaves.It’s always possible to make trees with pure leaves unless there are two different input vectors having identical features but different label.But it turns out that finding such minimum size tree is NP-hard(comlexity).We can approximate it very effectively with a greedy, top-down, Recursive partitioning approach. We keep splitting the data to minimize an impurity function that measures label purity amongst the children.There are different measures of impurity.</p>
+<h2 id="impurity-functions">Impurity Functions</h2>
+<p>Data : <span class="math inline">\(S = \{(x^{(1)},y^{(1)}),...,(x^{(n)},y^{(n)})\} \ , \ y^{(i)} \in \{1,2,...,c\},\)</span> where <span class="math inline">\(c\)</span> is the number of classes. Let <span class="math inline">\(S_{k} = \{(x,y) \in S : y  = k\}\)</span>, <span class="math inline">\(S = S_{1} \cup ... \cup S_{c}.\)</span> We define <span class="math inline">\(P_{k} = \frac{\vert S_{k} \vert}{\vert S \vert}\)</span>  (fraction of inputs in S with label k)<br />
+<strong>Gini impurity</strong> of a leaf is defined as <span class="math inline">\(G(S) = \sum_{k = 1}^{c} p_{k}(1 - p_{k})\)</span>. Gini Impurity of a tree : <span class="math inline">\(G^{T}(S) = \frac{\vert S_{L} \vert}{\vert S \vert} G^{T}(S_{L}) + \frac{\vert S_{R} \vert}{\vert S \vert} G^{T}(S_{R})\)</span> Where <span class="math inline">\(S = S_{L} \cup S_{R}\)</span>; <span class="math inline">\(S_{L} \cap S_{R}  = \phi\)</span>;<span class="math inline">\(\frac{\vert S_{L} \vert}{\vert S \vert} \)</span> is fraction of inputs in the left sub tree.<span class="math inline">\(\frac{\vert S_{R} \vert}{\vert S \vert}\)</span> is fraction of inputs in the left subtree</p>
+<h5 id="entropy">Entropy</h5>
+<p>Entropy of a leaf <span class="math inline">\( H(s) = - \sum_{k} p_{k}log(p_k)\)</span>. Entropy over tree <span class="math inline">\(H(s) = P^{L}H(S^{L}) + p^{R}H(S^R)\)</span>.Entropy of child nodes formed is weighted average of the nodes.The optimal split is the one in which entropy of the children is less than the parent.</p>
+<ul>
+<li><p>How to find the tree with minimum entropy?</p></li>
+<li><p>How to find the optimal split?  NP-Hard Problem</p></li>
+<li><p>How to split?  Try all splits.Take the one with lowest entropy</p></li>
+<li><p>How many possible splits?  For N data points, <span class="math inline">\(x \in \mathbb{R}^{d}\)</span> there are <span class="math inline">\((N-1)D\)</span> possible splits.</p></li>
+</ul>
+<h2 id="id3-algorithm">ID3-Algorithm</h2>
+<p>Base Cases:<br />
+<span class="math display">\[\textrm{ID3}(S):\left\{ \begin{array}{ll}
+ \textrm{if } \exists \bar{y}\textrm{ s.t. }\forall(x,y)\in S, y=\bar{y}\Rightarrow \textrm{return leaf } \textrm{ with label } \bar{ y}\\
+ \textrm{if } \exists\bar{x}\textrm{ s.t. }\forall(x,y)\in S, x=\bar{x}\Rightarrow \textrm{return leaf } \\  \ \ \ \ \textrm{ with mode}(y:(x,y)\in S)\textrm{ or mean (regression)}\end{array} \right.\]</span> The Equation above indicates the ID3 algorithm stop under two cases. The first case is that all the data points in a subset of have the same label. If this happens, we should stop splitting the subset and create a leaf with label <span class="math inline">\(y\)</span>. The other case is there are no more attributes could be used to split the subset. Then we create a leaf and label it with the most common <span class="math inline">\(y\)</span>. Try all features and all possible splits. Pick the split that minimizes impurity <span class="math inline">\((\textrm{e.g. } s&gt;t)\)</span> where <span class="math inline">\(f\leftarrow\)</span>feature and <span class="math inline">\(t\leftarrow\)</span>threshold</p>
+<p>Recursion:<br />
+<span class="math display">\[\textrm{Define: }\begin{bmatrix}
+ S^L=\left \{ (x,y)\in S: x_f\leq t \right \}\\ 
+ S^R=\left \{ (x,y)\in S: x_f&gt; t \right \}
+ \end{bmatrix}\]</span></p>
+<h1 id="bagging">Bagging</h1>
+<p>Bagging is a machine learning ensemble meta-algorithm designed to improve the stability and accuracy of machine learning algorithms used in statistical classification and regression. It also reduces variance and helps to avoid overfitting of any classifier.<br />
+Bias/Varience decomposition : <span class="math display">\[\underbrace{\mathbb{E}[(h_{D}(x)-y)^{2}]}_\text{Error} = \underbrace{\mathbb{E}[(h_{D}(x) - \bar{h}(x))^{2}]}_\text{Variance} + \underbrace{\mathbb{E}[(\bar{h}(x) - \bar{y}(x))^{2}] }_\text{Bias} + \underbrace{\mathbb{E}[(\bar{y}(x)- y(x))^{2}]}_\text{Noise}\]</span></p>
+<p>We would like to reduce the variance: <span class="math inline">\({\mathbb{E}[(h_{D}(x) - \bar{h}(x))^{2}]}\)</span>, for this to happen <span class="math inline">\(h_{D} ] \mapsto \bar{h}\)</span>.The weak law of large numbers says that for independent and identically distributed <span class="math inline">\(x_{i}\)</span> with mean <span class="math inline">\(\bar{x}\)</span>,</p>
+<p><span class="math display">\[\frac{1}{m} \sum_{i=1}^{m}x_{i} \rightarrow \bar{x} \ as \ m \ \rightarrow \infty\]</span></p>
+<p>Assume that we have m taining sets <span class="math inline">\(D_{1}, D_{2}, \dots D_{m}\)</span> drawn from <span class="math inline">\(P^{n}\)</span>.Train a classifier on each of the datset to obtain <span class="math inline">\(h_{D_{i}}\)</span>s and extrapolating above idea to classifiers, we obtain average of all such <span class="math inline">\(h_{D_{i}}\)</span>s:</p>
+<p><span class="math display">\[\hat{h} = \frac{1}{m} \sum_{i=1}^{m}h_{D_{i}} \rightarrow \bar{h} \ as \ m \rightarrow \infty\]</span>.We refer to such an average of multiple classifiers as an ensemble of classifiers.If <span class="math inline">\(\hat{h} \rightarrow \bar{h} \implies {\mathbb{E}[(h_{D}(x) - \bar{h}(x))^{2}]} \rightarrow 0\)</span>. But, as we saw earlier this needs m datsets, whereas we have only one dataset D.We can overcome this problem using <strong>Bagging</strong> (Bootstrap Aggregating).</p>
+<p>Simulate drawing uniformly with replacement from the set D. i.e let <span class="math inline">\(Q(X,Y\vert D)\)</span> be a probability distribution that picks a training sample <span class="math inline">\((x_{i},y_{i})\)</span> from <span class="math inline">\(D\)</span> uniformly at random. More formally, <span class="math inline">\(Q((x_{i},y_{i}) \vert D) = \frac{1}{n}  \ \forall (x_{i},y_{i}) \in D\)</span> with <span class="math inline">\(n = \vert D \vert\)</span>.We sample the set <span class="math inline">\(D_{i} \tilde Q^{n}\)</span>, i.e <span class="math inline">\(\vert D_{i} \vert = \)</span> and <span class="math inline">\(D_{i}\)</span> is picked with replacement from <span class="math inline">\(Q\vert D\)</span>.The bagged classifier is <span class="math inline">\(\hat{h_{D}} = \frac{1}{m} \sum_{i=1}^{m}h_{D_{i}}\)</span>.Bagging doesnt imply <span class="math inline">\(\hat{h} \rightarrow \bar{h}\)</span> as Weak Law of Large Numbers doesnt apply here( W.L.L.N only works for i.i.d. samples).However, in practice bagging still reduces variance very effectively.</p>
+<p>Although we cannot prove that the new samples are i.i.d., we can show that they are drawn from the original distribution P. Assume P is discrete, with <span class="math inline">\(P(X=xi)=pi\)</span> over some set (N very large) (let’s ignore the label for now for simplicity)</p>
+<h1 id="random-forest">Random Forest</h1>
+<p>Decision trees as such are not great classifiers because of bias-variance problem.The high variance problem of Decision trees can be reduced by using Bagging. One of the most famous and useful bagged algorithms is the Random Forest! A Random Forest is essentially nothing else but bagged decision trees, with a slightly modified splitting criteria.</p>
+<ol>
+<li><p>Sample m data sets <span class="math inline">\(D_{1},...,D_{m}\)</span> from D with replacement.</p></li>
+<li><p>For each <span class="math inline">\(D_{j}\)</span> train a full decision tree <span class="math inline">\(h_{j}()\)</span> <span class="math inline">\((max-depth \ = \infty)\)</span> with one small modification: before each split randomly subsample <span class="math inline">\(k \geq d\)</span> features (without replacement) and only consider these for your split. (This further increases the variance of the trees.)</p></li>
+<li><p>The Final Classifier is <span class="math inline">\(h(x) = \frac{1}{m}\sum_{i=1}^{m}h_{j}(x)\)</span></p></li>
+</ol>
+<p>The hyperparameters involved in a random forest are <span class="math inline">\(m\)</span> and <span class="math inline">\(k\)</span> A good choice for <span class="math inline">\(k\)</span> is <span class="math inline">\(k = \sqrt{d}\)</span> where d denotes the number of features.We can set m as large as you can afford.</p>
+<h1 id="kernels">Kernels</h1>
+<p>Linear classifiers are great, but what if there exists no linear decision boundary? As it turns out, there is an elegant way to incorporate non-linearities into most linear classifiers.</p>
+<p><strong>Feature Expansion</strong>:We can make linear classifiers non-linear by applying basis function (feature transformations) on the input feature vectors. Formally, for a data vector <span class="math inline">\(\mathbf{x}\in\mathbb{R}^d\)</span>, we apply the transformation <span class="math inline">\(\mathbf{x} \rightarrow \phi(\mathbf{x})\)</span> where <span class="math inline">\(\phi(\mathbf{x})\in\mathbb{R}^D\)</span>. Usually <span class="math inline">\(D \gg d\)</span> because we add dimensions that capture non-linear interactions among the original features.Even after feature expansion the problem stays convex and well behaved. (i.e. you can still use your original gradient descent code, just with the higher dimensional representation) but <span class="math inline">\(\phi(\mathbf{x})\)</span> might be very high dimensional.</p>
+<p>Consider the following example:<br />
+<span class="math inline">\(\mathbf{x}=\begin{pmatrix}x_1\\ x_2\\ \vdots \\ x_d \end{pmatrix}\)</span>, and define <span class="math inline">\(\phi(\mathbf{x})=\begin{pmatrix}1\\ x_1\\ \vdots \\x_d \\ x_1x_2 \\ \vdots \\ x_{d-1}x_d\\ \vdots \\x_1x_2\cdots x_d \end{pmatrix}\)</span>.</p>
+<p>In all elements of <span class="math inline">\(\phi(\mathbf{x})\)</span>, there are <span class="math inline">\({d \choose 0}\)</span> zero-degree monomials, <span class="math inline">\({d \choose 1}\)</span> one-degree monomials, ..., and <span class="math inline">\({d \choose d}\)</span>. As a sum-up, <span class="math inline">\({d \choose 0} +  {d \choose 1} +  {d \choose 2} + \cdots +  {d \choose d} =2^d\)</span>.Each element of <span class="math inline">\(\phi(\mathbf{x})\)</span> is equivalent to a subset of <span class="math inline">\(\{x_1,\cdots,x_d\}\)</span>. A subset of <span class="math inline">\(\{x_1,\cdots,x_d\}\)</span> is determined by <span class="math inline">\(d\)</span> binary decisions: whether <span class="math inline">\(x_i\)</span> (<span class="math inline">\(i=1\cdots d\)</span>) is in the subset of not. There are totally <span class="math inline">\(2^d\)</span> such decisions by combination, hence <span class="math inline">\(\{x_1,\cdots,x_d\}\)</span> has <span class="math inline">\(2^d\)</span> subsets and <span class="math inline">\(\phi(\mathbf{x})\)</span> has <span class="math inline">\(2^d\)</span> elements. This new representation, <span class="math inline">\(\phi(\mathbf{x})\)</span>, is very expressive and allows for complicated non-linear decision boundaries - but the dimensionality is extremely high. This makes our algorithm unbearable (and quickly prohibitively) slow.</p>
+<h2 id="the-kernel-trick"> The Kernel Trick</h2>
+<p><strong>Gradient Descent with Squared Loss</strong> The kernel trick is a way to get around this dilemma by learning a function in the much higher dimensional space, without ever computing a single vector <span class="math inline">\(\phi(\mathbf{x})\)</span> or ever computing the full vector <span class="math inline">\(\mathbf{w}\)</span>. It is a little magical.</p>
+<p>It is based on the following observation: If we use gradient descent with any one of our standard loss functions the gradient is a linear combination of the input samples. For example, let us take a look at the squared loss:</p>
+<p><span class="math display">\[\ell(\mathbf{w}) = \sum_{i=1}^n (\mathbf{w}^\top  \mathbf{x}_i-y_i)^2\label{eq:c15:sql}\]</span></p>
+<p>The gradient descent rule, with step-size/learning-rate <span class="math inline">\(s&gt;0\)</span> (we denoted this as <span class="math inline">\(\alpha&gt;0\)</span> in our &lt;a href=“lecturenote10.html”&gt;previous lectures&lt;/a&gt;), updates <span class="math inline">\(\mathbf{w}\)</span> over time, <span class="math display">\[w_{t+1} \leftarrow w_t - s(\frac{\partial \ell}{\partial \mathbf{w}})\ \textrm{ where: }
+ \frac{\partial \ell}{\partial \mathbf{w}}=\sum_{i=1}^n \underbrace{2(\mathbf{w}^\top  \mathbf{x}_i-y_i)}_{\gamma_i\ :\ \textrm{function of $\mathbf{x}_i, y_i$}} \mathbf{x}_i = \sum_{i=1}^n\gamma_i \mathbf{x}_i\]</span></p>
+<p>We will now show that we can express <span class="math inline">\(\mathbf{w}\)</span> as a linear combination of all input vectors, <span class="math display">\[\mathbf{w}=\sum_{i=1}^n \alpha_i {\mathbf{x}}_i.\label{eq:c15:alphas}\]</span> Since the loss is convex, the final solution is independent of the initialization, and we can initialize <span class="math inline">\(\mathbf{w}^0\)</span> to be whatever we want. For convenience, let us pick <span class="math inline">\(\mathbf{w}_0=\begin{pmatrix}0 \\ \vdots \\ 0\end{pmatrix}\)</span>. For this initial choice of <span class="math inline">\(\mathbf{w}_0\)</span>, the linear combination in <span class="math inline">\(\mathbf{w}=\sum_{i=1}^n \alpha_i {\mathbf{x}}_i\)</span> is trivially <span class="math inline">\(\alpha_1=\dots=\alpha_n=0\)</span>. We now show that throughout the entire gradient descent optimization such coefficients <span class="math inline">\(\alpha_1,\dots,\alpha_n\)</span> must always exist, as we can re-write the gradient updates entirely in terms of updating the <span class="math inline">\(\alpha_i\)</span> coefficients: <span class="math display">\[\begin{aligned}
+ \mathbf{w}_1=&amp;\mathbf{w}_0-s\sum_{i=1}^n2(\mathbf{w}_0^\top  \mathbf{x}_i-y_i)\mathbf{x}_i=\sum_{i=1}^n \alpha_i^0 {\mathbf{x}}_i-s\sum_{i=1}^n\gamma_i^0\mathbf{x}_i=\sum_{i=1}^n\alpha_i^1\mathbf{x}_i  \ \ (\textrm{with $\alpha_i^1=\alpha_i^0-s\gamma_i^0$})\nonumber\\
+ \mathbf{w}_2=&amp;\mathbf{w}_1-s\sum_{i=1}^n2(\mathbf{w}_1^\top  \mathbf{x}_i-y_i)\mathbf{x}_i=\sum_{i=1}^n \alpha_i^1\mathbf{x}_i-s\sum_{i=1}^n\gamma_i^1\mathbf{x}_i=\sum_{i=1}^n\alpha_i^2\mathbf{x}_i \ \ (\textrm{with $\alpha_i^2=\alpha_i^1\mathbf{x}_i-s\gamma_i^1$})\nonumber\\
+ \mathbf{w}_3=&amp;\mathbf{w}_2-s\sum_{i=1}^n2(\mathbf{w}_2^\top  \mathbf{x}_i-y_i)\mathbf{x}_i=\sum_{i=1}^n \alpha_i^2\mathbf{x}_i-s\sum_{i=1}^n\gamma_i^2\mathbf{x}_i=\sum_{i=1}^n\alpha_i^3\mathbf{x}_i \ \ (\textrm{with $\alpha_i^3=\alpha_i^2-s\gamma_i^2$})\nonumber\\
+ \cdots &amp; \qquad\qquad\qquad\cdots &amp;\cdots\nonumber\\
+ \mathbf{w}_t=&amp;\mathbf{w}_{t-1}-s\sum_{i=1}^n2(\mathbf{w}_{t-1}^\top  \mathbf{x}_i-y_i)\mathbf{x}_i=\sum_{i=1}^n \alpha_i^{t-1}\mathbf{x}_i-s\sum_{i=1}^n\gamma_i^{t-1}\mathbf{x}_i=\sum_{i=1}^n\alpha_i^t\mathbf{x}_i \  (\textrm{with $\alpha_i^t=\alpha_i^{t-1}-s\gamma_i^{t-1}$})\nonumber
+ \end{aligned}\]</span></p>
+<p>Formally, the argument is by induction. <span class="math inline">\(\mathbf{w}\)</span> is trivially a linear combination of our training vectors for <span class="math inline">\(\mathbf{w}_0\)</span> (base case). If we apply the inductive hypothesis for <span class="math inline">\(\mathbf{w}_t\)</span> it follows for <span class="math inline">\(\mathbf{w}_{t+1}\)</span>.</p>
+<p>The update-rule for <span class="math inline">\(\alpha_i^t\)</span> is thus <span class="math display">\[\alpha_i^t=\alpha_i^{t-1}-s\gamma_i^{t-1}, \textrm{ and we have } \alpha_i^t=-s\sum_{r=0}^{t-1}\gamma_i^{r}.\]</span> In other words, we can perform the entire gradient descent update rule without ever expressing <span class="math inline">\(\mathbf{w}\)</span> explicitly. We just keep track of the <span class="math inline">\(n\)</span> coefficients <span class="math inline">\(\alpha_1,\dots,\alpha_n\)</span>.</p>
+<p>Now that <span class="math inline">\(\mathbf{w}\)</span> can be written as a linear combination of the training set, we can also express the inner-product of <span class="math inline">\(\mathbf{w}\)</span> with any input <span class="math inline">\({\mathbf{x}}_i\)</span> purely in terms of inner-products between training inputs: <span class="math display">\[\mathbf{w}^\top {\mathbf{x}}_j=\sum_{i=1}^n \alpha_i {\mathbf{x}}_i^\top{\mathbf{x}}_j.\nonumber\]</span> Consequently, we can also re-write the squared-loss from <span class="math inline">\(\ell(\mathbf{w}) = \sum_{i=1}^n (\mathbf{w}^\top  \mathbf{x}_i-y_i)^2\)</span> entirely in terms of inner-product between training inputs: <span class="math display">\[\ell(\mathbf{\alpha}) = \sum_{i=1}^n \left(\sum_{j=1}^n\alpha_j\mathbf{x}_j^\top  \mathbf{x}_i-y_i\right)^2\label{eq:c15:sql:ip}\]</span> During test-time we also only need these coefficients to make a prediction on a test-input <span class="math inline">\(x_t\)</span>, and can write the entire classifier in terms of inner-products between the test point and training points: <span class="math display">\[h({\mathbf{x}}_t)=\mathbf{w}^\top {\mathbf{x}}_t=\sum_{j=1}^n\alpha_j{\mathbf{x}}_j^\top {\mathbf{x}}_t.\]</span> Do you notice a theme? The only information we ever need in order to learn a hyper-plane classifier with the squared-loss is inner-products between all pairs of data vectors.</p>
+<h2 id="inner-product-computation">Inner Product Computation</h2>
+<p>Let’s go back to the previous example, <span class="math inline">\(\phi(\mathbf{x})=\begin{pmatrix}1\\ x_1\\ \vdots \\x_d \\ x_1x_2 \\ \vdots \\ x_{d-1}x_d\\ \vdots \\x_1x_2\cdots x_d \end{pmatrix}\)</span>.</p>
+<p>The inner product <span class="math inline">\(\phi(\mathbf{x})^\top \phi(\mathbf{z})\)</span> can be formulated as: <span class="math display">\[\phi(\mathbf{x})^\top \phi(\mathbf{z})=1\cdot 1+x_1z_1+x_2z_2+\cdots +x_1x_2z_1z_2+ \cdots +x_1\cdots x_dz_1\cdots z_d=\prod_{k=1}^d(1+x_kz_k)\text{.}\label{eq:c15:poly}\]</span> The sum of <span class="math inline">\(2^d\)</span> terms becomes the product of <span class="math inline">\(d\)</span> terms. We can compute the inner-product from the above formula in time <span class="math inline">\(O(d)\)</span> instead of <span class="math inline">\(O(2^d)\)</span>! We define the function <span class="math display">\[\underbrace{\mathsf{k}(\mathbf{x}_i,\mathbf{x}_j)}_{\text{this is called the} \textbf{ kernel function}}=\phi(\mathbf{x}_i)^\top \phi(\mathbf{x}_j).\]</span> With a finite training set of <span class="math inline">\(n\)</span> samples, inner products are often pre-computed and stored in a Kernel Matrix: <span class="math display">\[\mathsf{K}_{ij}=\phi(\mathbf{x}_i)^\top \phi(\mathbf{x}_j).\]</span> If we store the matrix <span class="math inline">\(\mathsf{K}\)</span>, we only need to do simple inner-product look-ups and low-dimensional computations throughout the gradient descent algorithm. The final classifier becomes: <span class="math display">\[h(\mathbf{x}_t)=\sum_{j=1}^n\alpha_j\mathsf{k}(\mathbf{x}_j,\mathbf{x}_t).\]</span></p>
+<p>During training in the new high dimensional space of <span class="math inline">\(\phi(\mathbf{x})\)</span> we want to compute <span class="math inline">\(\gamma_i\)</span> through kernels, without ever computing any <span class="math inline">\(\phi(\mathbf{x}_i)\)</span> or even <span class="math inline">\(\mathbf{w}\)</span>. We previously established that <span class="math inline">\(\mathbf{w}=\sum_{j=1}^n\alpha_j \phi(\mathbf{x}_j)\)</span>, and <span class="math inline">\(\gamma_i=2(\mathbf{w}^\top \phi(\mathbf{x}_i)-y_i)\)</span>. It follows that <span class="math inline">\(\gamma_i=2(\sum_{j=1}^n \alpha_jK_{ij})-y_i)\)</span>. The gradient update in iteration <span class="math inline">\(t+1\)</span> becomes <span class="math display">\[\alpha_i^{t+1}\leftarrow \alpha_i^t-2s(\sum_{j=1}^n \alpha_j^tK_{ij})-y_i).\]</span> As we have <span class="math inline">\(n\)</span> such updates to do, the amount of work per gradient update in the transformed space is <span class="math inline">\(O(n^2)\)</span> — far better than <span class="math inline">\(O(2^d)\)</span>.</p>
+<h2 id="general-kernels">General Kernels</h2>
+<p>Below are some popular kernel functions:</p>
+<ul>
+<li><p>Linear: <span class="math inline">\(\mathsf{K}(\mathbf{x},\mathbf{z})=\mathbf{x}^\top \mathbf{z}\)</span>.</p>
+<p>(The linear kernel is equivalent to just using a good old linear classifier - but it can be faster to use a kernel matrix if the dimensionality <span class="math inline">\(d\)</span> of the data is high.)</p></li>
+<li><p>Polynomial: <span class="math inline">\(\mathsf{K}(\mathbf{x},\mathbf{z})=(1+\mathbf{x}^\top \mathbf{z})^d\)</span>.</p></li>
+<li><p>Radial Basis Function (RBF) (aka Gaussian Kernel): <span class="math inline">\(\mathsf{K}(\mathbf{x},\mathbf{z})= e^\frac{-\|\mathbf{x}-\mathbf{z}\|^2}{\sigma^2}\)</span>.</p>
+<p>The RBF kernel is the most popular Kernel! It is a <a href="&quot;https://en.wikipedia.org/wiki/Universal_approximation_theorem">Universal approximator</a>. Its corresponding feature vector is infinite dimensional and cannot be computed. However, very effective low dimensional approximations exist. RBF is universal approximator, but we dont use it all the time, because if our data set size <span class="math inline">\(n\)</span> is very large, the <span class="math inline">\(n\times n\)</span> kernel matrix can become too large and too expensive to compute.</p></li>
+<li><p>Exponential Kernel: <span class="math inline">\(\mathsf{K}(\mathbf{x},\mathbf{z})= e^\frac{-\| \mathbf{x}-\mathbf{z}\|}{2\sigma^2}\)</span></p></li>
+<li><p>Laplacian Kernel: <span class="math inline">\(\mathsf{K}(\mathbf{x},\mathbf{z})= e^\frac{-| \mathbf{x}-\mathbf{z}|}{\sigma}\)</span></p></li>
+<li><p>Sigmoid Kernel: <span class="math inline">\(\mathsf{K}(\mathbf{x},\mathbf{z})=\tanh(\mathbf{a}\mathbf{x}^\top  + c)\)</span></p></li>
+</ul>
+<h2 id="kernel-functions">Kernel Functions</h2>
+<p>Can any function <span class="math inline">\(\mathsf{K}(\cdot,\cdot)\rightarrow{\mathcal{R}}\)</span> be used as a kernel?No, the matrix <span class="math inline">\(\mathsf{K}(\mathbf{x}_i,\mathbf{x}_j)\)</span> has to correspond to real inner-products after some transformation <span class="math inline">\({\mathbf{x}}\rightarrow \phi({\mathbf{x}})\)</span>. This is the case if and only if <span class="math inline">\(\mathsf{K}\)</span> is positive semi-definite. A matrix <span class="math inline">\(A\in \mathbb{R}^{n\times n}\)</span> is positive semi-definite iff <span class="math inline">\(\forall \mathbf{q}\in\mathbb{R}^n\)</span>, <span class="math inline">\(\mathbf{q}^\top A\mathbf{q}\geq 0\)</span>. Remember <span class="math inline">\(\mathsf{K}_{ij}=\phi(\mathbf{x}_i)^\top \phi(\mathbf{x}_j)\)</span>. So <span class="math inline">\(\mathsf{K}=\Phi^\top\Phi\)</span>, where <span class="math inline">\(\Phi=[\phi(\mathbf{x}_1),\dots,\phi(\mathbf{x}_n)]\)</span>. It follows that <span class="math inline">\(\mathsf{K}\)</span> is p.s.d., because <span class="math inline">\(\mathbf{q}^\top\mathsf{K}\mathbf{q}=(\Phi^\top \mathbf{q})^2\geq 0\)</span>. Inversely, if any matrix <span class="math inline">\(\mathbf{A}\)</span> is p.s.d., it can be decomposed as <span class="math inline">\(A=\Phi^\top\Phi\)</span> for some realization of <span class="math inline">\(\Phi\)</span>.<br />
+A matrix of form <span class="math inline">\(\mathsf{K}=\begin{pmatrix} \mathbf{x}_1^\top \mathbf{x}_1, ..., \mathbf{x}_1^\top \mathbf{x}_n \\ \vdots ~ \vdots \\ \mathbf{x}_n^\top \mathbf{x}_1, ..., \mathbf{x}_n^\top \mathbf{x}_n \end{pmatrix}=\begin{pmatrix} \mathbf{x}_1\\ \vdots \\ \mathbf{x}_n \end{pmatrix} \begin{pmatrix} \mathbf{x}_1, \cdots \mathbf{x}_n \end{pmatrix}\)</span> must be positive semi-definite because: <span class="math inline">\(\mathbf{q}^\top A\mathbf{q}=(\underbrace{\begin{pmatrix} \mathbf{x}_1, \cdots \mathbf{x}_n \end{pmatrix}\mathbf{q}}_{\text{a vector with the same dimension of } \mathbf{x}_i})^\top (\begin{pmatrix} \mathbf{x}_1, \cdots \mathbf{x}_n \end{pmatrix}\mathbf{q})\geq 0\)</span> for <span class="math inline">\(\forall \mathbf{q}\in\mathbb{R}^n\)</span>.</p>
+<h1 id="clustering">Clustering</h1>
+<p>Clustering is an unsupervised learning problem.</p>
+<h2 id="k-means-optimization-problem">K-means Optimization Problem</h2>
+<ul>
+<li><p>Input : <span class="math inline">\(x_{1}, x_{2}, ... , x_{n} \in \mathbb{R}^{d} \ ; integer \ k\)</span></p></li>
+<li><p>Output : Centers or representatives <span class="math inline">\(\mu_{1},...,\mu_{k} \in \mathbb{R} ^{d}\)</span></p></li>
+<li><p>Goal: minimize average squared distance between points and their nearest representative <span class="math inline">\( cost(\mu_{1},...,\mu_{k}) = \sum_{i=1}^{n} \vert \vert x_{i} - \mu_{j} \vert \vert ^{2} \)</span></p></li>
+</ul>
+<p>The centers partition <span class="math inline">\(\mathbb{R}^{d}\)</span> into k- convex regions.<span class="math inline">\(\mu_{j}&#39;\)</span>s region consist of points for which it is the closest center.</p>
+<p>1.  Initialize cluster centers <span class="math inline">\(\mu_{1},...,\mu_{k}\)</span> in some manner. 2.  Repeat until convergence:</p>
+<p>For every <span class="math inline">\(i\)</span>, set<br />
+<span class="math inline">\(c^{i} := arg \min_{j}   \vert \vert x_{i} - \mu_{j} \vert \vert ^{2} \)</span></p>
+<p>For each j, set<br />
+<span class="math inline">\(\mu_{j} = \frac{\sum_{i=1}^{m} 1 \{c^{(i)}=j\}x^{(i)}}{\sum_{i=1}^{m} 1 \{c^{(i)}=j\}}\)</span></p>
+<p>In the iteration, <span class="math inline">\((1)\)</span> refers to assigning each point to closest center,<span class="math inline">\((2)\)</span> refers to updating each <span class="math inline">\(\mu_{j}\)</span> to the mean of the points assigned to it.Initializing the cluster centroids is usually done by choosing <span class="math inline">\(k\)</span> training examples randomly</p>
+<h2 id="clustering-with-mixtures-of-gaussian">Clustering with mixtures of Gaussian</h2>
+<p>Given: <span class="math inline">\(x_{1}\)</span>, <span class="math inline">\(x_{2}\)</span>, ... ,<span class="math inline">\(x_{n}\)</span> <span class="math inline">\(\in \mathbb R^{d}\)</span>.We need to clusterize the data.<br />
+Each of the k-clusters is defined by:</p>
+<ul>
+<li><p>A gaussian distribution <span class="math inline">\(P_{j}=N(\mu_{j},\Sigma_{j})\)</span> , <span class="math inline">\(\mu_{j} \in \mathbb R^{d}\)</span> , <span class="math inline">\(\Sigma_{j} \in \mathbb R^{dxd}\)</span></p></li>
+<li><p>A mixing weight <span class="math inline">\(\pi_{j}\)</span></p></li>
+</ul>
+<p><span class="math inline">\(Pr(x)=\sum_{j}Pr(cluster)Pr(x|cluster \ j)\)</span> The Overall distribution over <span class="math inline">\(\mathbb R^{d}\)</span> is a mixture of Gaussian i.e <span class="math inline">\(Pr(x)=\pi_{1}P_{1}(x)+\pi_{2}P_{2}(x)+...+\pi_{k}P_{k}(x)\)</span><br />
+<strong>The Clustering Task:</strong><br />
+</p>
+<ul>
+<li><p>Given: <span class="math inline">\(x_{1}\)</span>, <span class="math inline">\(x_{2}\)</span>, ... ,<span class="math inline">\(x_{n}\)</span> <span class="math inline">\(\in \mathbb R^{d}\)</span></p></li>
+<li><p>For any mixture model <span class="math inline">\(\pi_{1}\)</span>, <span class="math inline">\(\pi_{2}\)</span>,...,<span class="math inline">\(\pi_{k}\)</span> and <span class="math inline">\(P_{1}=N(\mu_{1},\Sigma_{1})\)</span>,...,<span class="math inline">\(P_{k}=N(\mu_{k},\Sigma_{k})\)</span></p></li>
+<li><p><span class="math inline">\(\mathrm{Pr}(\mathrm{data} \vert \sum_{i=1}^{k}\pi_{i} \mathrm{P_{i}})=\underset{i}\Pi\)</span> <span class="math inline">\( \mathrm{Pr(x_{i}})\)</span> <span class="math inline">\( =\underset{i=1 }   \Pi \overset{n}  (Pr(x)=\pi_{1}P_{1}(x)+\pi_{2}P_{2}(x)+...+\pi_{k}P_{k}(x))=\)</span> <span class="math inline">\(\underset{i=1}\Pi \)</span> <span class="math inline">\(\underset{j=1} \sum  \pi_{j}\mathrm{P_{j(x_{i})}} \)</span></p></li>
+<li><p><span class="math inline">\(\mathrm{Pr}(\mathrm{data} \vert \sum_{i=1}^{k}\pi_{i} \mathrm{P_{i}})\)</span> <span class="math inline">\(=\prod_{i=1}^{n}\{\sum_{j=1}^{k}\frac{\pi_{j}}{(2\pi)^{d/2} \vert \Sigma_{j}\vert^{\frac{1}{2}}  } 
+    \exp (\frac{-1}{2} (x_{i}-\mu_{j})^{T}\Sigma_{j}^{-1}(x_{i}-\mu_{j}))\}\)</span></p></li>
+<li><p>This is the likelihhod of the data under the model <span class="math inline">\(\pi_{1}\)</span>, <span class="math inline">\(\pi_{2}\)</span>,...,<span class="math inline">\(\pi_{k}\)</span> and <span class="math inline">\(P_{1}=N(\mu_{1},\Sigma_{1})\)</span>,...,<span class="math inline">\(P_{k}=N(\mu_{k},\Sigma_{k})\)</span></p>
+<p>Now the task is to find the maximum likelihood mixture of gaussians i.e to find the parameters <span class="math inline">\(\{\pi_{j},\mu_{j},\Sigma_{j}:j=1,...,k\}\)</span> that maximizes the function</p></li>
+<li><p>Maximizing <span class="math inline">\(\mathrm{Pr}(\mathrm{X} \vert \sum_{i=1}^{k}\pi_{i} \mathrm{P_{i}})\)</span> is same as maximizing log of the same maximizing <span class="math inline">\(\log \mathrm{Pr}(\mathrm{X} \vert \sum_{i=1}^{k}\pi_{i} \mathrm{P_{i}})\)</span> is equivalent to</p></li>
+<li><p>minimizing neagative <span class="math inline">\(\log \mathrm{Pr}(\mathrm{X} \vert \sum_{i=1}^{k}\pi_{i} \mathrm{P_{i}})\)</span></p></li>
+<li><p>Minimizing the negative log-likelihood<br />
+<span class="math inline">\(\mathrm{L}(\{\pi_{j},\mu_{j},\Sigma_{j} \})=\sum_{i=1}^{n} \ln \{\sum_{j=1}^{k}\frac{\pi_{j}}{(2\pi)^{d/2} \vert \Sigma_{j}\vert^{\frac{1}{2}}  } 
+    \exp (\frac{-1}{2} (x_{i}-\mu_{j})^{T}\Sigma_{j}^{-1}(x_{i}-\mu_{j}))\} \)</span></p></li>
+<li><p>L is not a convex function,have multiple local minima.Finding global minima is a NP hard problem</p></li>
+</ul>
+<p><strong>Expectation Maximization (EM) Algorithm</strong></p>
+<ul>
+<li><p>Initialize <span class="math inline">\(\pi_{1}\)</span>, <span class="math inline">\(\pi_{2}\)</span>,...,<span class="math inline">\(\pi_{k}\)</span> and <span class="math inline">\(P_{1}=N(\mu_{1},\Sigma_{1})\)</span>,...,<span class="math inline">\(P_{k}=N(\mu_{k},\Sigma_{k})\)</span></p></li>
+<li><p>Repeat until convergence: Assign each point <span class="math inline">\(x_{i}\)</span> fractionally between k-clusters <span class="math inline">\(\mathrm{w_{ij}} = \mathrm{Pr}(\mathrm{cluster,j} \vert x_{i})=\frac {\pi_{j}P_{j}(x_{i})} {\sum_{l}P_{l}(x_{i})}\)</span></p></li>
+<li><p>Update mixing weights,means,covariances <span class="math inline">\(\pi_{j}=\frac{1}{n}\sum_{i=1}^{n}w_{ij}\)</span> <span class="math inline">\(\mu_{j}=\frac{1}{n\pi_{j}}\sum_{i=1}^{n}w_{ij}x_{i}\)</span> <span class="math inline">\(\Sigma_{j}=\frac{1}{n\pi_{j}} \sum_{i=1}^{n}w_{ij}(x_{i}-\mu_{j})(x_{i}-\mu_{j})^{T}\)</span></p></li>
+</ul>
+<h1 id="generative-approch-to-classification">Generative Approch to Classification</h1>
+<p>The Learning Problem - Fit a probability distribution to each class individually.To classify a new point - Which of the distribution was it most likely to have come from?</p>
+<ul>
+<li><p>For each class j,we have probability of that class, <span class="math inline">\(\pi_{j}=Pr(y=j)\)</span> and distribution of data in that class <span class="math inline">\(P_{j}(x)\)</span></p></li>
+<li><p>The Overall joint distribution is: <span class="math inline">\(Pr(x,y)=Pr(y)Pr(x\vert y)=\pi_{y}P_{y}(x)\)</span></p></li>
+<li><p>To classify a new x: pick the label y with largest <span class="math inline">\(Pr(x,y)\)</span></p></li>
+</ul>
+<p><strong>Two Dimensional Genearative Modelling with Bivariate Gaussian</strong></p>
+<ul>
+<li><p>Distribution over random varibales <span class="math inline">\(x_{1}\)</span> and <span class="math inline">\(x_{2}\)</span> ,<span class="math inline">\((x_{1} ,  x_{2})\in R^{2}\)</span></p></li>
+<li><p>Mean <span class="math inline">\((\mu_{1},\mu _{2}) \in R^{2}\)</span>, <span class="math inline">\( \mu_{1}=E(x_{1})\)</span>, <span class="math inline">\(\mu_{2}=E(x_{2})\)</span></p></li>
+<li><p>covarince of two random variables <span class="math inline">\(x_{1},x_{2}\)</span> is : <span class="math inline">\(cov(x_{1},x_{2})=E(x_{1}x_{2})-E(x_{1})E(x_{2})\)</span>,where <span class="math inline">\(\sum_{11}=Var(x_{1})\)</span>, <span class="math inline">\(\sum_{22}=Var(x_{2})\)</span>, <span class="math inline">\(\sum_{21}=\sum_{12}=cov(x_{1},x_{2})\)</span></p></li>
+<li><p>The density <span class="math inline">\(P(x_{1},x_{2})\)</span> is given by, <span class="math display">\[P(x_{1},x_{2})=\frac{1}{2\pi \vert \sum \vert ^{\frac{1}{2}}} \exp[-\frac{1}{2} \left({\begin{array}{cc}{x_{1}-\mu_{1}}\\\ {x_{1}-\mu_{1}}\end{array}}\right) \sum^{-1} \left({\begin{array}{cc}{x_{1}-\mu_{1}}\\\ {x_{1}-\mu_{1}}\end{array}}\right)]\]</span></p></li>
+<li><p>Density is highest at the mean <span class="math inline">\((\mu_{1},\mu_{2})\)</span> and falls off in a ellipsoidal contours.The shape of the ellipsoid is determined by the covariance matrix</p>
+<p>Find an implementation <a href="https://github.com/aswin16/ML-REPORT/blob/master/codes/winery-multivariate/winery-classification-gaussian.ipynb">here</a></p></li>
+</ul>
+<h1 id="neural-networks">Neural Networks</h1>
+<p>Deep feed-forward networks, also often called feed-forward neural networks, or multi-layer perceptrons (MLPs), are the quintessential deep learning models. The goal of a feed-forward network is to model some function <span class="math inline">\(\textbf{g}\)</span>. A feed-forward network defines a mapping <span class="math inline">\(y = f (x; W)\)</span> and learns the value of the parameters W that result in the best function approximation <span class="math inline">\(f \approx g\)</span>. So a neural network approximates a function of interest, when the parameters W is set to appropriate values. For a given Neural Network (NN), the parameters are the weights and biases of the individual neuron. The learning process is finding the values of the parameters such that the network computes the desired function.</p>
+<p>The linear models mentioned earlier have serious shortcomings as in the inability to learn interaction between input features. The linear models can be extended to represent nonlinear functions of x, by applying the linear model to a transformation of <span class="math inline">\(x\)</span>, <span class="math inline">\(\phi(x)\)</span>, where <span class="math inline">\(\phi\)</span> is a nonlinear transformation. In the linear models, say for example logistic regression the model learns the parameters (weights and bias) but the neural network learns the representation <span class="math inline">\(\phi\)</span> in addition to the parameters. The strategy of deep learning is to learn the representation <span class="math inline">\(\phi\)</span> (unlike in kernel methods). We have a model <span class="math inline">\(y = f (x; \theta , w ) = \phi(x; \theta)^{T} w \)</span>. <span class="math inline">\(\theta\)</span> parameterize the neural network model that learns the representation <span class="math inline">\(\phi\)</span> from a broad class of functions, and parameters w maps <span class="math inline">\(\phi(x)\)</span> to the desired output. This is an example of a deep feed-forward network, with <span class="math inline">\(\phi\)</span> defining a hidden layer. We parameterize the representation as <span class="math inline">\(\phi(x;\theta)\)</span> and use the optimization algorithm to find the <span class="math inline">\(\theta\)</span> that corresponds to a good representation. In general, we can write</p>
+<p><span class="math display">\[h : \phi(x) \rightarrow \phi(x)^T w + b\]</span> where <span class="math inline">\(\phi(x)\)</span> = <span class="math inline">\(\sigma(U\vec{x} )\)</span>, <span class="math inline">\(\sigma\)</span> is a transition function. The transformation <span class="math inline">\(x \rightarrow \phi(x)\)</span> can be attained usually by a cascade of arbitrary number of transformation say, <span class="math inline">\(x \rightarrow \phi^{&#39;&#39;}(x) \rightarrow \phi^{&#39;}(x) \rightarrow \phi (x)\)</span></p>
+<p><span class="math display">\[\phi(x)  =  \sigma(U^{&#39;} \phi^{&#39;}(x))\]</span> <span class="math display">\[\phi^{&#39;}(x)  =  \sigma(U^{&#39;&#39;} \phi^{&#39;&#39;}(x))\]</span> <span class="math display">\[\phi^{&#39;&#39;}(x) = \sigma(Ux)\]</span></p>
+<h2 id="perceptron-recap">Perceptron Recap</h2>
+<p>In a binary classification problem , where data set (D) is <span class="math inline">\((x,y) \in \mathbb{R}^{d} \times\{-1,1\}\)</span>, the learning problem is to find a hyper-plane which separates the data into two classes, assuming the data is linearly classifiable. The hyper-plane is parameterized by <span class="math inline">\(w\in\mathbb{R}^{d}\)</span> and <span class="math inline">\( b \in \mathbb{R}\)</span> such that <span class="math inline">\(w.x + b = 0 \)</span>, so the problem is equivalent to learning the parameters <span class="math inline">\(w\)</span> and <span class="math inline">\(b\)</span>.On point <span class="math inline">\(x\)</span>, we predict the label as <span class="math inline">\(\textbf{sign(w.x + b)}\)</span>.<br />
+<span class="math display">\[(w.x + b) &gt; 0  \implies y = +1 \therefore y(w.x + b) &gt; 0\]</span></p>
+<p><span class="math display">\[(w.x + b) &lt; 0  \implies y = -1 \therefore y(w.x + b) &gt; 0\]</span></p>
+<p>i.e., If the true label of x is y, then <span class="math inline">\(y(w.x + b) &gt; 0 \)</span>, whereas for a mis-classified points <span class="math inline">\(y(w.x + b) \leq 0 \)</span>.<br />
+Perceptron can be loosely thought of as a threshold gate very much like a biological neuron as in when the weighted sum of the inputs (voltage analogue) exceeds the threshold <span class="math inline">\(T\)</span>, the perceptron’s output is identically one (neuron fires) else zero always(rest state neuron). This is shown in Fig.1.</p>
+<div class="figure">
+<img src="img/perceptron" alt="" />
+<p class="caption"><span data-label="fig:perceptron"></span></p>
+</div>
+<p>The output of such a perceptron will be a step function, such that</p>
+<p><span class="math display">\[y =
+\begin{cases}
+1, &amp; \text{if} \  \sum_{i} w_ix_i \geq T 
+\\
+0 , &amp;   else 
+\end{cases}\]</span></p>
+<p>If we define <span class="math inline">\(z = \sum_{i} w_ix_i - T \)</span>, then it is equivalent to,</p>
+<p><span class="math display">\[y =
+\begin{cases}
+1, &amp; \text{if} \ z \geq 0 
+\\
+0 , &amp;   else 
+\end{cases}\]</span></p>
+<p>This threshold gate can realize AND and OR GATE, but not XOR gate.</p>
+<h3 id="multi-layer-perceptron-mlp">Multi-layer Perceptron (MLP) </h3>
+<p>MLP is a network of perceptions. Generically an MLP can be said to have three different types of layers, the input layer, output layer and the hidden layer. The input layer doesn’t contain perceptrons. The nodes in the input layer represent each component of the input data vector. The output layer gives the output. Flanked by these two is the hidden layer. The input and output of an MLP can be real-valued or Boolean.<br />
+</p>
+<p>/ł[count=] in <span>1,2,3,missing,4</span> (input-) at (0,2.5-) ;</p>
+<p>in <span>1,missing,2</span> (hidden-) at (2,2-1.25) ;</p>
+<p>in <span>1,missing,2</span> (output-) at (4,1.5-) ;</p>
+<p>ł[count=i] in <span>1,2,3,n</span> (input-i) – ++(-1,0) node [above, midway] <span><span class="math inline">\(I_\l\)</span></span>;</p>
+<p>ł[count=i] in <span>1,n</span> at (hidden-i.north) <span><span class="math inline">\(H_\l\)</span></span>;</p>
+<p>ł[count=i] in <span>1,n</span> (output-i) – ++(1,0) node [above, midway] <span><span class="math inline">\(O_\l\)</span></span>;</p>
+<p>iin <span>1,...,4</span> in <span>1,...,2</span> (input-i) – (hidden-);</p>
+<p>iin <span>1,...,2</span> in <span>1,...,2</span> (hidden-i) – (output-);</p>
+<p>ł[count=from 0] in <span>Input, Hidden, Ouput</span> at (2,2) <span>ł<br />
+layer</span>;</p>
+<p>Why MLPs? Why are these better than a single perceptron? What kind of computation they can undertake? What are their limitations?</p>
+<p>Naively speaking, the answer to these questions lies in the fact that MLPs can compose Boolean functions and real-valued functions and they are universal function approximators <span class="citation"></span>.</p>
+<h2 id="computation-in-a-neural-network">Computation in a neural network</h2>
+<p>The problem setting : <span class="math inline">\(x\)</span> and <span class="math inline">\(y\)</span> denotes feature and output, where <span class="math inline">\(x \in \mathbb{R}^{n_x}\)</span>, <span class="math inline">\(y \in \{0,1\}\)</span> . If there are <span class="math inline">\(m\)</span> training examples, <span class="math inline">\((x^{(1)}, y^{(1)}), (x^{(2)}, y^{(2)}) , ... , (x^{(m)}, y^{(m)}) \)</span> then it can be written as matrices,</p>
+<p><span class="math display">\[X = \begin{bmatrix}
+|        &amp;         |     &amp;       &amp;    |     \\
+x^{(1)}  &amp;      x^{(2)}  &amp; \dots &amp; x^{(m)} \\
+
+|        &amp;         |     &amp;       &amp;    |
+
+
+\end{bmatrix}\]</span></p>
+<p><span class="math display">\[y = \begin{bmatrix}
+y^{(1)} &amp;  y^{(2)} \dots  y^{(m)}
+\end{bmatrix}\]</span></p>
+<p>A multi-layer perceptron is also known as a Neural Network, where each neuron does the same computation as that of a perceptron except that the threshold function is replaced with a more smooth non-linear function. Suppose the feature vector(input) be <span class="math inline">\(x \in \mathbb{R}^n\)</span> and weight be <span class="math inline">\(w \in \mathbb{R}^n\)</span>, the weighted sum of the input is denoted by <span class="math inline">\(z\)</span>, where <span class="math inline">\(z = w.x + b\)</span>, where <span class="math inline">\(b\)</span> is a bias term. On applying non-linearity on this weighted sum we get output of the neuron i.e is <span class="math inline">\(a =  \sigma(z)\)</span>. For a single layer, we can express this as matrices, where <span class="math inline">\(W^{[i]} \)</span> is the weight matrix associated with <span class="math inline">\(i^{th}\)</span> layer.</p>
+<div class="figure">
+<img src="img/nn" alt="" />
+<p class="caption"><span data-label="fig:nn"></span></p>
+</div>
+<p><span class="math display">\[\begin{aligned}
+x &amp;= \begin{bmatrix}
+x_1 \\ x_2 \\ x_3
+\end{bmatrix}  &amp;  W^{[1]} &amp; =  \begin{bmatrix}
+- &amp; W^{[1]T}_1 &amp; - \\
+- &amp; W^{[1]T}_2 &amp; - \\
+- &amp; W^{[1]T}_3 &amp; - 
+\end{bmatrix}\end{aligned}\]</span></p>
+<p><span class="math inline">\(W^{[1]}\)</span> is a <span class="math inline">\(3 \times 3\)</span> matrix, it is the weight associated with the three neurons in the first layer.</p>
+<p><span class="math display">\[Z^{[1]}_1 =  W^{[1]}_1X + b^{[1]}_1  \ ; \  a^{[1]}_1 =  \sigma(z^{[1]}_1)\]</span> <span class="math display">\[Z^{[1]}_2 =  W^{[1]}_2X + b^{[1]}_2  \ ; \ a^{[1]}_2 =  \sigma(z^{[1]}_1)\]</span> <span class="math display">\[Z^{[1]}_3 =  W^{[1]}_3X + b^{[1]}_3  \ ;  \  a^{[1]}_3 =  \sigma(z^{[1]}_3)\]</span></p>
+<p><span class="math display">\[\begin{aligned}
+a^{[1]} = \sigma(z^{[1]})  &amp;&amp; z^{[2]} = W^{[2]}a^{[1]} + b^{[2]}     &amp;&amp; a^{[2]} = \sigma(Z^{[2]}) = \hat{y}\end{aligned}\]</span></p>
+<h2 id="activation-functions">Activation Functions</h2>
+<p>A Feed Forward Neural Network carries out this computation, <span class="math inline">\(z = wx + b, \ \hat{y}= a = \sigma(z)\)</span>, called Forward Propagation. It “learns” by minimizing a loss function. In this context, learning means changing the weights of the neural network such that the original <span class="math inline">\(y\)</span> and predicted <span class="math inline">\(\bar{y}\)</span> agrees for the training data. In Gradient-based learning, the parameter update depends on the gradient of the loss function with respect to the parameter and inputs. This is achieved by backpropagation, <span class="citation"></span>,<span class="citation"></span> which is essentially a recursive calculation of gradient using the chain rule of derivatives. The term backpropagation refers to the fact that, computation graph of calculating the gradient of the loss function with respect to parameters/input is opposite in direction of information flow in a feed-forward network(forward propagation) So gradient-based learning require a continuous and differentiable activation function unlike the step/threshold function used as activation in the perception. Other required properties of activation functions are:</p>
+<ul>
+<li><p>The derivative shouldn’t asymptotically be zero-like over its domain because very small derivatives lead to slow or almost no learning. eg: sigmoid function</p></li>
+<li><p>The derivative shouldn’t explode(taking large values, tending towards infinity), since it will lead to numerical instability.</p></li>
+</ul>
+<p>In general, the activation function is denoted by <span class="math inline">\(g\)</span> where <span class="math inline">\(g\)</span> is a non-linear function.</p>
+<ul>
+<li><p><strong>Sigmoid</strong>: <span class="math inline">\(a =  \frac{1}{1 \ + \ e^{-x}}\)</span> The function takes the value <span class="math inline">\(\frac{1}{2}\)</span> at <span class="math inline">\(x = 0\)</span>, for large <span class="math inline">\(x\)</span> its value approaches 1, and for large negative x, it approaches 0.It’s continuous and differentiable, making it a candidate for activation function and the fact that its range is <span class="math inline">\([0,1]\)</span> makes the case for interpreting the output of the neural network as probabilities. The argument against using the sigmoid is that, it saturates quickly away from 0, making its derivatives to converge to zero for a large part of the domain, thus affecting learning.<br />
+<span class="math inline">\(y = \sigma(x) \ \ \ \  \frac{dy}{dx} \ = \ y(1-y)\)</span></p></li>
+<li><p><strong>Hyperbolic Tangent</strong>: <span class="math inline">\(a = tanh(x) = \frac{e^z \ - \ e^{-x}}{e^x \ + \ e^{-x}}\)</span>. It can be expressed as <span class="math inline">\(tanh(x) = 2\sigma(2x) \ -\ 1\)</span>, this implies that tanh is a scaled and shifted sigmoid. It’s continous and differentiable through out it’s domain and it’s range is <span class="math inline">\([-1,1]\)</span>. Away from 0, similar to sigmoid, the function saturates causing the gradient there to approach zero.</p>
+<p><span class="math inline">\(y =  tanh(x) \ \ \ \frac{dy}{dx} = 1 \ - \ y^2 \)</span></p></li>
+<li><p><strong>Rectifed Linear Unit(ReLU)</strong><span class="citation"></span></p>
+<p><span class="math display">\[g(x) =  max(0, \ x) \ = \
+    \begin{cases}
+    0, &amp; \text{if} \ x  \ &lt; \ 0 
+    \\
+    x , &amp; \text{if} \ x \geq 0 
+    \end{cases}\]</span></p>
+<p>ReLU has discontinuity at <span class="math inline">\(x = 0\)</span>, hence not differentiable at <span class="math inline">\(x = 0\)</span>. In practice we set the derivate at <span class="math inline">\(x = 0\)</span> to either 0 or 1(left and right derivative respectively). For <span class="math inline">\(x&gt;0\)</span> the gradient remains constant and never approaches zero unlike hyperbolic tan or sigmoid. But for <span class="math inline">\(x &lt; 0\)</span>, the gradient is identically <span class="math inline">\(0\)</span> and affects learning - dying ReLU problem.</p></li>
+<li><p><strong>Leaky ReLU</strong> adresses the problem of zero gradient for <span class="math inline">\(x &lt; 0\)</span> of ReLU.</p>
+<p><span class="math display">\[g(x) =  max( \alpha x, \ x) \ = 
+    \begin{cases}
+    0, &amp; \text{if} \ \alpha x  \ &lt; \ 0 
+    \\
+    x , &amp; \text{if} \ x \geq 0 
+    \end{cases}\]</span></p>
+<p>where <span class="math inline">\(\alpha\)</span> is set to a small positive value such as 0.01. This avoids the dying ReLU problem.</p></li>
+<li><p><strong>Parametric ReLU</strong></p>
+<p><span class="math display">\[g(x) =  max( \alpha x, \ x) \ = \
+    \begin{cases}
+    0, &amp; \text{if} \ \alpha x  \ &lt; \ 0 
+    \\
+    x , &amp; \text{if} \ x \geq 0 
+    \end{cases}\]</span></p>
+<p>Another workaround for the dying ReLU problem is making <span class="math inline">\(\alpha \)</span> a learnable parameter.</p></li>
+</ul>
+<p>Weights  (<span class="math inline">\(w\)</span>) and biases  (<span class="math inline">\(b\)</span>) of a neural network are called parameters, they are optimized to minimize the loss. The evolution of parameters is dictated by hyperparameters which are tunable and they include step size/learning rate <span class="math inline">\(\eta\)</span>, number of iteration of gradient descent, number of hidden layers, number of nodes in a layer, momentum term, mini-batch size etc.</p>
+<h2 id="bias-and-variance">Bias And Variance</h2>
+<p>One of the most important properties of an efficient Neural Network model is its ability to generalize. If we make our model complex enough to capture the structure of the training data, then training error consistently decreases with increasing complexity and can converge to zero. This model then overfits the training data and will typically generalize poorly i.e test error is much higher than train error, this scenario is called a <strong>high-variance problem</strong>. On the other hand, if the model is simple, then it under-fits the data, then both train and test error will have a higher value and is comparable. We have to find a model of intermediate complexity that gives minimum expected test error. The generalizing capability of models can be classified as:</p>
+<ul>
+<li><p>High-Bias: Both test and train error has a large comparable value</p></li>
+<li><p>High-Variance : training error is very low in magnitude and the test error is high</p></li>
+<li><p>High-Bias, High-Variance : Both training and test errors are high but test error is higher than train error</p></li>
+<li><p>Low-Bias, Low-Variance : Both test and train error is very low and comparable</p></li>
+</ul>
+<p>An ideal model should have low variance and low bias. Using a bigger neural network and/or training longer and with trying different neural architecture might solve the problem of high bias, whereas training with more data and using a regularizer will help with the high-variance problem.</p>
+<h3 id="regularization">Regularization</h3>
+<p>Regularization limits the learning capacity of the model to prevents memorization and thus avoiding over-fitting. It is also used to impose other forms of constraints inspired by domain knowledge on the model structure or parameters. This is achieved mainly by two types of methods viz., modification of loss function and stochastic regularization.</p>
+<p>Imposing constraints on parameters can affect learning. This is generally achieved by adding penalising terms <span class="math inline">\(\lambda r(w) \)</span> to the objective function, where <span class="math inline">\(w\)</span> denotes parameters of the model, <span class="math inline">\(\lambda\)</span> is the regularization constant and <span class="math inline">\(r\)</span> is the regularizer. Different norms impart different forms and structures to the models by affecting the weights.</p>
+<p><span class="math display">\[\underset{w,b }{\min} \ \sum_{i=1}^{m} L(\hat{y}_i,y_i) + \lambda r(w)\]</span></p>
+<p>If the regularizer is <span class="math inline">\(l_2\)</span> or euclidean norm, which is differentiable and strictly convex, encourages small but dense weights, whereas using <span class="math inline">\(l_1\)</span> or Manhattan norm which is not strictly convex and is not differentiable at 0, renders the weights sparse.</p>
+<h3 id="convolutional-neural-networks">Convolutional Neural Networks <span class="citation"></span></h3>
+<p>Given functions f and g, their convolution <span class="math inline">\((f \ast g)(t)\)</span> is defined as:</p>
+<p><span class="math display">\[s(t) = (f\ast g)(t) = \int_{-\infty}^{\infty} f(\tau)g(t-\tau)d\tau = \int_{-\infty}^{\infty} f(t-\tau)g(\tau)d\tau\]</span></p>
+<p>Convolution operation commutes. The discrete analogue is,</p>
+<p><span class="math display">\[s(t) = (f\ast g)(i) = \sum_{k = -\infty}^{\infty} f(k)g(i-k ) = \sum_{k = -\infty}^{\infty} f(i-k)g(k)\]</span></p>
+<p>In CNN terminology, <span class="math inline">\(f\)</span> is called input and <span class="math inline">\(g\)</span> as the kernel. If the input (I) and kernel (K) are matrices as in the cases of images, the convolution can be expressed as</p>
+<p><span class="math display">\[S(i,j) = (I \ast K)(i,j) = \sum_m \sum_n I(m,n)K(i-m, j - n)\]</span> <span class="math display">\[S(i,j) = (I \ast K)(i,j) = \sum_m \sum_n I(i-m,j-n)K(m,n)\]</span></p>
+<p>Usually, in math literature, the kernel matrix is flipped along the horizontal and vertical before convolution, commutativity arise due to this flipping. But in Machine Learning implementations, the kernel is not flipped and the operation now is called cross-correlation:</p>
+<p><span class="math display">\[S(i,j) = (I \ast K)(i,j) = \sum_m \sum_n I(i+m,j+n)K(m,n)\]</span></p>
+<p>But convention in ML is to use cross-correlation and call it convolution and is followed here too.</p>
+<p>Convolutional Neural networks are neural networks where usual linear operation - taking a linear combination of the inputs, is replaced with another linear operation viz., convolution, at least in one layer. Unlike a fully connected neural network, where the weights were optimized for higher training accuracy, here the learning algorithm will learn appropriate values of the kernel.</p>
+<h3 id="why-cnn">Why CNN ?</h3>
+<p>In a fully connected neural network, each layer is represented as a matrix operator followed by applying non-linearity. This matrix contains weights that transform each input to the output, this means every output unit interact with every input unit. If a neural network layer has m inputs and n outputs(or nodes), then there are <span class="math inline">\(m \times n\)</span> parameters.Instead of connecting a neuron with all the neurons of the previous layer, we can make the connections <strong>sparse</strong> by using a kernel, which convolves with a small region within the input image.</p>
+<p>A kernel learned for a particular region of an image would be activated by a certain feature in the image, it is plausible that this feature exists at other regions of the image, so rather than learning a separate set of parameters for every location, we can use the same kernel throughout the image, i.e parameters are shared between kernels(<strong>parameter sharing</strong>). Layers with this kind of parameter sharing in convolutional networks acquire a property called <strong>equivariance to translation</strong>.</p>
+<p>Linear activations obtained after convolution undergoes non-linear transformation, this stage is called the detector stage. As this image passes through the convolutional layers the spatial dimensions of the input change depending on some parameters like kernel size, kernel strides, padding etc. Later, <strong>Pooling function</strong> is used to replace the output of the neural network at a certain region with it’s summary statistics, the size of which is a hyper-parameter, hence by doing so the spatial dimension decreases. <strong>Max Pooling</strong> returns the maximum value within a rectangular neighbourhood, <strong>average pooling</strong> returns the mean of all the values in the rectangular region. Based on the position of the layer within the network, they detect different features. In the context of vision, the initial convolutional layer is interpreted as extracting lower level features such as vertical and horizontal edges - so acts as an edge detector. More complex features are extracted by the subsequent layers.</p>
+<h3 id="some-aspects-of-implementation">Some aspects of implementation</h3>
+<p><span class="math display">\[\begin{aligned}
+\begin{bmatrix}
+x_1 &amp; x_2 &amp; x_3 \\
+x_4 &amp; x_5 &amp; x_6 \\
+x_7 &amp; x_8 &amp; x_9
+\end{bmatrix}  \ast  \begin{bmatrix}
+k1 &amp; k2 \\
+k3 &amp; k4 \\
+\end{bmatrix} &amp;= \begin{bmatrix}
+k_1x_1 + k_2x_2 + k_3x_4 + k_4x_5 &amp; k_1x_2 + k_2x_3 + k_3x_5 + k_4x_6 \\
+k_1x_4 + k_2x_5 + k_3x_7 + k_4x_8 &amp; k_1x_5 + k_2x_6 + k_3x_8 + k_4x_9
+\end{bmatrix}\end{aligned}\]</span></p>
+<p>So convolution can be seen as sum of the element-wise product of the filter and each block(of the size of filter) of the image, obtained by shifting the kernel. Convolutions can detect edges as in Sobel and Scharr operators. The kernel parameters(matrix elements) are initialized either randomly or is sampled from a distribution, better kernels are learned as the model is trained with back-propagation. The amount with which the kernel is shifted over the image is called stride(s). During convolution, pixels at the edge are not much used in the process of convolution whereas the pixels in the middle contribute to different convolution’s outputs, thus information on the edges are less consequential, the same time, the dimension of the outputs shrinks also when convolved. To overcome this, we use padded convolution where we pad the input image with zeros at the edges. The amount of padding is denoted by <span class="math inline">\(p\)</span> - i.e the number of rows and columns to be concatenated to the edge of the input image of each layer before convolution. Along with strides and kernel size, padding also controls the dimensions of the output.</p>
+<p>If an <span class="math inline">\((n \times n)\)</span> image is convloved with <span class="math inline">\((f \times f)\)</span> kernel, with padding <span class="math inline">\(p\)</span> and stride <span class="math inline">\(s\)</span>,</p>
+<p><span class="math display">\[(n \times n)  \ast (f \times f)  \longrightarrow  ( \lfloor \frac{n + 2p -f}{s} \rfloor +1 \times     \lfloor \frac{n + 2p -f}{s} \rfloor +1 )\]</span></p>
+<p>Padding is said to be <strong>’same’</strong> if for a certian value p, the output spatial dimension is same as input spatial dimension whereas it’s called <strong>’valid’</strong> if <span class="math inline">\(p = 0\)</span>. In CNN the input is a tensor with shape <strong><span class="math inline">\((\text{number of inputs} \times \text{height of image} \times \text{width of image} \times \text{number of channels})\)</span></strong> whereas shape of the kernel is <strong><span class="math inline">\((\ \text{f} \times \text{f} \times \text{number of channels})\)</span></strong> so the number channels have to be the same. Kernels convolve with the input channel-wise and sum the corresponding pixels along the channel axis to get a single channel image. <span class="math display">\[(m \times n_h \times  n_w \times n_c) \ast (f \times f \times n_c ) \xrightarrow{s = 1, p =0} (m \times n_h-f+1  \times n_w-f+1 \times 1)\]</span></p>
+<p>It is also possible to use multiple filters. Suppose the input image has k channels, then filters also should have k channels. If we are using, say, n filters then each filter will have k channels, and each filter’s output will have only one channel. As there are multiple filters, n of them, then the output will have n channels.</p>
+<p>Pooling helps to reduce the size of the representation, speed up the computations and makes feature detection robust. In <strong>Max Pooling</strong>, a (f,f) window is slid over the input and returns the max value of all the pixels in the window region of the image, the window size f and stride s are hyper-parameters. The number of channels is conserved. In <strong>average pooling</strong>, the mean of all the pixels in the window is returned .</p>
+</body>
+</html>
